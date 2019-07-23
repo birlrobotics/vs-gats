@@ -1,0 +1,12 @@
+dataset/detection_data
+dataset/hico
+dataset/processed
+dataset__pycache__
+test_img
+
+checkpoints/*
+log/*
+
+
+*.pyc
+*.mp4
