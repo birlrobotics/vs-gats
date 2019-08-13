@@ -2,7 +2,6 @@ from __future__ import print_function
 import sys
 import os
 import numpy as np
-import cv2
 import argparse
 import ipdb
 
@@ -27,7 +26,7 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, atten=None):
             return img    
 
         if scores is not None:
-            keep = np.where(scores > 0.2)
+            keep = np.where(scores > 0.7)
             bboxs = bboxs[keep]
             labels = labels[keep]
             scores = scores[keep] 
@@ -94,7 +93,9 @@ def main(args):
     node_labels = test_data['node_labels']
     features = test_data['feature']
     print("Testing on image named {}".format(img_name))
-    
+    if node_num == 0:
+        print("No detection. Please test another image!!!")
+
     # Load checkpoint and set up model
     try:
         # load checkpoint
@@ -112,21 +113,9 @@ def main(args):
         print('Failed to load checkpoint or construct model!', e)
         sys.exit(1)
 
-    # set up graph
-    graph = dgl.DGLGraph()
-    graph.add_nodes(node_num)
-    edge_list = []
-    for src in range(node_num):
-        for dst in range(node_num):
-            if src == dst:
-                continue
-            else:
-                edge_list.append((src, dst))
-    src, dst = tuple(zip(*edge_list))
-    graph.add_edges(src, dst)   # make the graph bi-directional
     # referencing
     features = torch.FloatTensor(features).to(device)
-    outputs, atten = model(graph, features, roi_labels) 
+    outputs, atten = model(node_num, features, roi_labels) 
     # show result
     image = Image.open(os.path.join('dataset/hico/images/test2015', img_name)).convert('RGB')
     image_temp = image.copy()
@@ -134,8 +123,8 @@ def main(args):
     raw_outputs = sigmoid(outputs)
     raw_outputs = raw_outputs.cpu().detach().numpy()
     # ipdb.set_trace()
-    class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-    # class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels)
+    # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
+    class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels)
     action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs, atten)
     
     fig = plt.figure(figsize=(100,100))
@@ -165,7 +154,7 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='inference of the model')
 
-    parser.add_argument('--data', type=str, default='./dataset/processed/test2015/HICO_test2015_00001576.p',
+    parser.add_argument('--data', type=str, default='./dataset/processed/test2015/HICO_test2015_00003005.p',
                         help='A path to the test data is necessary.')
     parser.add_argument('--dataset', '-d', type=str, default='ucf101', choices=['ucf101','hmdb51'],
                         help='Location of the dataset: ucf101')
@@ -173,7 +162,7 @@ if __name__ == "__main__":
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
-    parser.add_argument('--random_data', type=str2bool, default='true',
+    parser.add_argument('--random_data', type=str2bool, default='false',
                         help='select data randomly from the test dataset: true')
     args = parser.parse_args()
     # inferencing

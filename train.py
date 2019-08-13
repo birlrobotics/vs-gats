@@ -154,7 +154,6 @@ def run_model(args):
 
     # # build optimizer && criterion  
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-   
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
@@ -169,7 +168,6 @@ def run_model(args):
         for phase in ['train', 'val']:
             start_time = time.time()
             running_loss = 0.0
-            running_corrects = 0.0
             idx = 0
             # for idx in tqdm(range((dataset[phase]))):
             # for idx, file in tqdm(enumerate(dataloader[phase])): 
@@ -182,30 +180,18 @@ def run_model(args):
                 node_num = train_data['node_num']
                 node_labels = train_data['node_labels']
                 features = train_data['feature']
-
+                if node_num == 0: 
+                    continue
                 # ipdb.set_trace() 
-                if node_num == 0 or node_num == 1: continue
                 features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
 
-                # set up graph
-                graph = dgl.DGLGraph()
-                graph.add_nodes(node_num)
-                edge_list = []
-                for src in range(node_num):
-                    for dst in range(node_num):
-                        if src == dst:
-                            continue
-                        else:
-                            edge_list.append((src, dst))
-                src, dst = tuple(zip(*edge_list))
-                graph.add_edges(src, dst)   # make the graph bi-directional
                 # nx.draw(graph.to_networkx(), node_size=500, with_labels=True, node_color='#00FFFF')
                 # plt.show()
                 # ipdb.set_trace()
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs, atten = model(graph, features, roi_labels)
+                    outputs, atten = model(node_num, features, roi_labels)
                     loss = criterion(outputs, node_labels)
                     loss.backward()
                     optimizer.step()
@@ -213,7 +199,7 @@ def run_model(args):
                     model.eval()
                     # turn off the gradients for vaildation, save memory and computations
                     with torch.no_grad():
-                        outputs = model(graph, features, roi_labels)
+                        outputs, atten = model(node_num, features, roi_labels)
                         loss = criterion(outputs, node_labels)
 
                     # print resulr every 1000 iterationa during validation
@@ -233,14 +219,14 @@ def run_model(args):
                 running_loss += loss.item() * node_labels.shape[0]
             # calculate the loss and accuracy of each epoch
             epoch_loss = running_loss / len(dataset[phase])
-            # epoch_acc = running_corrects.double() / len(dataset[phase])
+            
             # log trainval datas, and visualize them in the same graph
             if phase == 'train':
                 train_loss = epoch_loss  
-                # train_acc = epoch_acc
+        
             else:
                 writer.add_scalars('trainval_loss_epoch', {'train': train_loss, 'val': epoch_loss}, epoch)
-                # writer.add_scalars('trainval_acc_epoch', {'train': train_acc, 'val': epoch_acc}, epoch)
+                
             # print data
             if (epoch % args.print_every) == 0:
                 end_time = time.time()
@@ -264,34 +250,6 @@ def run_model(args):
 
     writer.close()
     print('Finishing training!')
-
-    #     '''------------------------------------------TESTING------------------------------------------'''
-    #     # test the model or not
-    #     if args.test and (epoch % args.test_every == args.test_every-1):
-    #         print('Finished {} epochs training. Start to test the model!'.format(epoch+1))
-    #         # testing model
-    #         model.eval()
-    #         testing_loss = 0.0
-    #         testing_corrects = 0.0
-    #         for inputs, labels in tqdm(train_dataloader):
-    #             inputs = inputs.to(device)
-    #             labels = labels.to(device)
-    #             with torch.no_grad():
-    #                 outputs = model(inputs)
-    #             loss = criterion(torch.log(outputs), labels)
-    #             testing_loss += loss.item() * inputs.shape[0]
-    #             top_probs, top_class = outputs.topk(1, dim=1)
-    #             testing_corrects += torch.sum(top_class == labels.data.view(top_class.shape))
-    #         epoch_loss = testing_loss / test_size
-    #         epoch_acc = testing_corrects.double() / test_size
-    #         # log data
-    #         writer.add_scalar('test_loss_epoch', epoch_loss, epoch+1)
-    #         writer.add_scalar('test_acc_epoch', epoch_acc, epoch+1)
-    #         # print something out
-    #         print("[test] Epoch: {}/{} Loss: {} Acc: {}".format(epoch+1, args.epoch, epoch_loss, epoch_acc))
-
-    # writer.close()
-    # print('Finishing training!')
   
 if __name__ == "__main__":
     run_model(args)

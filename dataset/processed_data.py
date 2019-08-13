@@ -21,7 +21,7 @@ def get_node_index(classname, bbox, det_classes, det_boxes, node_num):
     #     max_iou = 0.7  # Use 0.7 as a threshold for evaluation
     # else:
     #     max_iou = 0.5  
-    max_iou = 0.5  # Use 0.5 as a threshold for evaluation
+    max_iou = 0.4  # Use 0.5 as a threshold for evaluation
     max_iou_index = -1
 
     for i_node in range(node_num):
@@ -65,7 +65,7 @@ def parse_data(args):
             # sweep away the 'N/A' proposals
             keep_idx = []
             for idx in range(det_class.shape[0]):
-                if not metadata.coco_classes[det_class[idx]] == 'N/A':
+                if not metadata.coco_classes_pytorch[det_class[idx]] == 'N/A':
                     keep_idx.append(idx)
             det_feat = det_feat[keep_idx, :]
             det_boxes = det_boxes[keep_idx, :]
@@ -73,10 +73,13 @@ def parse_data(args):
             det_scores = det_scores[keep_idx]
 
             # from coco label to hico label
-            det_class = np.array(metadata.coco_to_hico)[det_class].astype(int)
+            # det_class = np.array(metadata.coco_to_hico)[det_class].astype(int)
+            
+            # from coco_pytorch(90) label to coco_80 label
+            det_class = np.array(metadata.coco_pytorch_to_coco)[det_class].astype(int)
 
             # calculate the number of nodes
-            human_num = len(np.where(det_class == 50))
+            human_num = len(np.where(det_class == 1))
             obj_num = len(det_class) - human_num
             node_num = human_num + obj_num
 

@@ -152,11 +152,28 @@ class GRNN(nn.Module):
         super(GRNN, self).__init__()
         self.gnn = GNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size , action_num=117, activation='rule')
 
-    def forward(self, g, node_feat, roi_label):
+    def forward(self, node_num, node_feat, roi_label):
+        # set up graph
+        graph = dgl.DGLGraph()
+        graph.add_nodes(node_num)
+        # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
+        if node_num == 1:
+            print("just one node. no edges")
+            
+        else:
+            edge_list = []
+            for src in range(node_num):
+                for dst in range(node_num):
+                    if src == dst:
+                        continue
+                    else:
+                        edge_list.append((src, dst))
+            src, dst = tuple(zip(*edge_list))
+            graph.add_edges(src, dst)   # make the graph bi-directional
         # ipdb.set_trace()
-        h_node = np.where(roi_label == 50 )
-        obj_node = np.where(roi_label != 50)
-        g.ndata['n_f'] = node_feat
-        output, alpha = self.gnn(g, h_node[0], obj_node[0])
+        h_node = np.where(roi_label == 1 )
+        obj_node = np.where(roi_label != 1)
+        graph.ndata['n_f'] = node_feat
+        output, alpha = self.gnn(graph, h_node[0], obj_node[0])
         # ipdb.set_trace()
         return output, alpha

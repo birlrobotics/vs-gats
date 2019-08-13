@@ -15,18 +15,18 @@ hico_classes = ['__background__',  # always index 0
                 'teddy_bear', 'tennis_racket', 'tie', 'toaster', 'toilet', 'toothbrush', 'traffic_light', 'train',
                 'truck', 'tv', 'umbrella', 'vase', 'wine_glass', 'zebra']
 
-# coco_classes = ['__background__',  # always index 0
-#                 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
-#                 'traffic_light', 'fire_hydrant', 'stop_sign', 'parking_meter', 'bench', 'bird', 'cat', 'dog', 'horse',
-#                 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
-#                 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports_ball', 'kite', 'baseball_bat', 'baseball_glove',
-#                 'skateboard', 'surfboard', 'tennis_racket', 'bottle', 'wine_glass', 'cup', 'fork', 'knife', 'spoon',
-#                 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot_dog', 'pizza', 'donut',
-#                 'cake', 'chair', 'couch', 'potted_plant', 'bed', 'dining_table', 'toilet', 'tv', 'laptop', 'mouse',
-#                 'remote', 'keyboard', 'cell_phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
-#                 'clock', 'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush']
-
 coco_classes = ['__background__',  # always index 0
+                'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
+                'traffic_light', 'fire_hydrant', 'stop_sign', 'parking_meter', 'bench', 'bird', 'cat', 'dog', 'horse',
+                'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
+                'suitcase', 'frisbee', 'skis', 'snowboard', 'sports_ball', 'kite', 'baseball_bat', 'baseball_glove',
+                'skateboard', 'surfboard', 'tennis_racket', 'bottle', 'wine_glass', 'cup', 'fork', 'knife', 'spoon',
+                'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot_dog', 'pizza', 'donut',
+                'cake', 'chair', 'couch', 'potted_plant', 'bed', 'dining_table', 'toilet', 'tv', 'laptop', 'mouse',
+                'remote', 'keyboard', 'cell_phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
+                'clock', 'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush']
+
+coco_classes_pytorch = ['__background__',  # always index 0
                 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
                 'train', 'truck', 'boat', 'traffic_light', 'fire_hydrant', 'N/A', 'stop_sign',
                 'parking_meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
@@ -40,7 +40,8 @@ coco_classes = ['__background__',  # always index 0
                 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A', 'book',
                 'clock', 'vase', 'scissors', 'teddy_bear', 'hair_drier', 'toothbrush' ]
 
-coco_to_hico = ['N/A' if c not in hico_classes else hico_classes.index(c) for c in coco_classes]
+coco_to_hico = ['N/A' if c not in hico_classes else hico_classes.index(c) for c in coco_classes_pytorch]
+coco_pytorch_to_coco = ['N/A' if c not in coco_classes else coco_classes.index(c) for c in coco_classes_pytorch]
 hico_to_coco = [coco_classes.index(c) for c in hico_classes]
 
 hoi_classes = ['board', 'direct', 'exit', 'fly', 'inspect', 'load', 'ride', 'sit_on', 'wash', 'no_interaction',

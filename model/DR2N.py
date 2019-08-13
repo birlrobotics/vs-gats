@@ -32,8 +32,7 @@ class DR2N(nn.Module):
                 else:
                     edge_list.append((src, dst))
         src, dst = tuple(zip(*edge_list))
-        graph.add_edges(src, dst)
-        graph.add_edges(dst, src)   # make the graph undirectional
+        graph.add_edges(src, dst)   # make the graph undirectional
         # pass grnn 
         output = self.grnn(graph, features, roi_labels, action_label)
 
