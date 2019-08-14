@@ -26,7 +26,7 @@ def get_node_index(classname, bbox, det_classes, det_boxes, node_num):
 
     for i_node in range(node_num):
         # print(classname, metadata.hico_classes[metadata.coco_to_hico[det_classes[i_node]]])
-        if classname == metadata.hico_classes[det_classes[i_node]]:
+        if classname == metadata.coco_classes[det_classes[i_node]]:
             # check bbox overlap
             intersection_area = compute_area(get_intersection(bbox, det_boxes[i_node, :]))
             iou = intersection_area/(compute_area(bbox)+compute_area(det_boxes[i_node, :])-intersection_area)

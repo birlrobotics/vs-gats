@@ -22,6 +22,7 @@ from sklearn.model_selection import train_test_split
 
 from model.grnn import GRNN
 from dataset import metadata
+import utils.io as io
 
 ###########################################################################################
 #                                 SET SOME ARGUMENTS                                      #
@@ -45,7 +46,7 @@ parser.add_argument('--clip_len', type=int, default=64,
                     help='set time step: 64') 
 parser.add_argument('--drop_prob', type=float, default=0.5,
                     help='dropout parameter: 0.2')
-parser.add_argument('--lr', type=float, default=0.001,
+parser.add_argument('--lr', type=float, default=0.003,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
@@ -54,8 +55,8 @@ parser.add_argument('--test', type=str2bool, default='true',
 #  parser.add_argument('--clip', type=int, default=4,
 #                      help='gradient clipping: 4')
 
-parser.add_argument('--dataset', type=str, default='ucf101', choices=['ucf101','hmdb51'],
-                    help='location of the dataset: ucf101')
+parser.add_argument('--img_data', type=str, default='dataset/hico/images/train2015',
+                    help='location of the original dataset')
 parser.add_argument('--pretrained', type=str, default='',
                     help='location of the pretrained model file for training: None')
 parser.add_argument('--log_dir', type=str, default='./log',
@@ -80,6 +81,13 @@ parser.add_argument('--crop_height',  type=int, default=224,
                     help='crop the height of frames when processing: 224')
 parser.add_argument('--crop_width',  type=int, default=224,
                     help='crop the widht of frames when processing: 224')   
+
+parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+                    help='the version of code, will create subdir in log/ && checkpoints/ ')
+
+parser.add_argument('--train_model', type=str, default='epoch', required=True,
+                    choices=['epoch', 'iteration'],
+                    help='the version of code, will create subdir in log/ && checkpoints/ ')
 
 args = parser.parse_args() 
 
@@ -107,7 +115,7 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None):
             # ipdb.set_trace()
             Drawer.rectangle(list(bbox), outline=(120,0,0), width=line_width)
             if raw_action is None:
-                text = metadata.hico_classes[label]
+                text = metadata.coco_classes[label]
                 if scores is not None:
                     text = text + " " + '{:.3f}'.format(scores[idx])
                 h, w = font.getsize(text)
@@ -135,8 +143,6 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None):
 #                                     TRAIN/TEST MODEL                                    #
 ###########################################################################################
 def run_model(args):
-
-    img_dir = 'dataset/hico/images/train2015'
     # get data file
     data_list = sorted(os.listdir('dataset/processed/train2015/'))
     train_list, val_list = train_test_split(data_list, test_size=0.2, random_state=42)
@@ -147,9 +153,10 @@ def run_model(args):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
 
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
-    print('training on {}'.format(device))
+    print('training on {}...'.format(device))
 
-    model = GRNN(in_feat=2*1024, out_feat=1024, hidden_size=1024, action_num=117)
+    model = GRNN(feat_sizes=[2*1024, 1024, 1024], atten_layers=2, hidden_size=1024, action_num=117, \
+            node_activation=['ReLU']*2, edge_activation=['ReLU']*2, atten_activation=['LeakyReLU']*2, bias=True, use_bn=False, drop_prob=None)
     model.to(device)
 
     # # build optimizer && criterion  
@@ -158,11 +165,122 @@ def run_model(args):
     criterion = nn.BCEWithLogitsLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
-    # # set visualization and create folder to save checkpoints
-    writer = SummaryWriter(log_dir=args.log_dir)
-    if not os.path.exists(args.save_dir):
-        os.mkdir(args.save_dir)
+    if args.train_model == 'epoch':
+        epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, device)
+    else:
+        iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler, device)
 
+def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler, device):
+    print('iteration training...')
+    # # set visualization and create folder to save checkpoints
+    writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'iteration_train')
+    io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'iteration_train'), recursive=True)
+    iter=0
+    for epoch in range(args.epoch):
+        start_time = time.time()
+        running_loss = 0.0
+        for file in tqdm(dataloader['train']): 
+            train_data = pickle.load(open('dataset/processed/train2015/{}'.format(file[0]), 'rb'))
+            img_name = train_data['img_name']
+            det_boxes = train_data['boxes']
+            roi_labels = train_data['classes']
+            roi_scores = train_data['scores']
+            node_num = train_data['node_num']
+            node_labels = train_data['node_labels']
+            features = train_data['feature']
+            if node_num ==0 or node_num == 1:
+                # print(img_name) 
+                continue 
+            features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+            # training
+            model.train()
+            model.zero_grad()
+            outputs, atten = model(node_num, features, roi_labels)
+            loss = criterion(outputs, node_labels)
+            loss.backward()
+            optimizer.step()
+            # loss.backward()
+            # if step%exp_const.imgs_per_batch==0:
+            #     optimizer.step()
+            #     optimizer.zero_grad()
+            # accumulate loss of each batch
+            running_loss += loss.item() * node_labels.shape[0]
+            if iter % 99 == 0:
+                loss = running_loss/(iter+1)
+                writer.add_scalar('train_loss_iter', loss, iter)
+
+            if iter % 4999 == 0:
+                num_samples = 2500
+                val_loss = 0
+                idx = 0
+                for file in tqdm(dataloader['val']):
+                    # if idx > num_samples:
+                    #     break
+                    train_data = pickle.load(open('dataset/processed/train2015/{}'.format(file[0]), 'rb'))
+                    img_name = train_data['img_name']
+                    det_boxes = train_data['boxes']
+                    roi_labels = train_data['classes']
+                    roi_scores = train_data['scores']
+                    node_num = train_data['node_num']
+                    node_labels = train_data['node_labels']
+                    features = train_data['feature']
+                    if node_num == 1:
+                        print(img_name) 
+                        continue 
+
+                    features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+                    # training
+                    model.eval()
+                    model.zero_grad()
+                    outputs, atten = model(node_num, features, roi_labels)
+                    loss = criterion(outputs, node_labels)
+                    val_loss += loss.item() * node_labels.shape[0]
+
+                    if idx==0 or idx%1000 == 999:
+                        image = Image.open(os.path.join(args.img_data, img_name)).convert('RGB')
+                        image_temp = image.copy()
+                        sigmoid = nn.Sigmoid()
+                        raw_outputs = sigmoid(outputs)
+                        raw_outputs = raw_outputs.cpu().detach().numpy()
+                        # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
+                        class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels.cpu().numpy())
+                        action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
+                        writer.add_image('class_detection', np.array(class_img).transpose(2,0,1))
+                        writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
+                    idx+=1
+                loss = val_loss / len(dataset['val'])
+                writer.add_scalar('val_loss_iter', loss, iter)
+                
+                # save model
+                checkpoint = { 
+                            'lr': args.lr,
+                        'in_feat': 2*1024, 
+                        'out_feat': 1024,
+                    'hidden_size': 1024,
+                    'action_num': 117,
+                    'state_dict': model.state_dict()
+                }
+                save_name = "checkpoint_" + str(iter+1) + '_iters.pth'
+                torch.save(checkpoint, os.path.join(args.save_dir, args.exp_ver, 'iteration_train', save_name))
+
+            iter+=1
+
+        epoch_loss = running_loss / len(dataset['train'])
+        if (epoch % args.print_every) == 0:
+            end_time = time.time()
+            # print("[{}] Epoch: {}/{} Loss: {} Acc: {} Execution time: {}".format(\
+            #         phase, epoch+1, args.epoch, epoch_loss, epoch_acc, (end_time-start_time)))
+            print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
+                    'train', epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
+
+    writer.close()
+    print('Finishing training!')
+
+def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, device):
+    print('epoch training...')
+    # # set visualization and create folder to save checkpoints
+    writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'epoch_train')
+    io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'epoch_train'), recursive=True)
     for epoch in range(args.epoch):
         # each epoch has a training and validation step
         for phase in ['train', 'val']:
@@ -180,7 +298,8 @@ def run_model(args):
                 node_num = train_data['node_num']
                 node_labels = train_data['node_labels']
                 features = train_data['feature']
-                if node_num == 0: 
+                if node_num == 1: 
+                    print(img_name)
                     continue
                 # ipdb.set_trace() 
                 features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
@@ -202,14 +321,15 @@ def run_model(args):
                         outputs, atten = model(node_num, features, roi_labels)
                         loss = criterion(outputs, node_labels)
 
-                    # print resulr every 1000 iterationa during validation
+                    # print result every 1000 iterationa during validation
                     if idx==0 or idx%1000 == 999:
-                        image = Image.open(os.path.join(img_dir, img_name)).convert('RGB')
+                        image = Image.open(os.path.join(args.img_data, img_name)).convert('RGB')
                         image_temp = image.copy()
                         sigmoid = nn.Sigmoid()
                         raw_outputs = sigmoid(outputs)
                         raw_outputs = raw_outputs.cpu().detach().numpy()
-                        class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
+                        # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
+                        class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels)
                         action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
                         writer.add_image('class_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
@@ -223,10 +343,8 @@ def run_model(args):
             # log trainval datas, and visualize them in the same graph
             if phase == 'train':
                 train_loss = epoch_loss  
-        
             else:
                 writer.add_scalars('trainval_loss_epoch', {'train': train_loss, 'val': epoch_loss}, epoch)
-                
             # print data
             if (epoch % args.print_every) == 0:
                 end_time = time.time()
@@ -239,6 +357,7 @@ def run_model(args):
         # save model
         if epoch % args.save_every == (args.save_every -1):
             checkpoint = { 
+                          'lr': args.lr,
                      'in_feat': 2*1024, 
                     'out_feat': 1024,
                  'hidden_size': 1024,
@@ -246,11 +365,11 @@ def run_model(args):
                   'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
-            torch.save(checkpoint, os.path.join(args.save_dir, save_name))
+            torch.save(checkpoint, os.path.join(args.save_dir, args.exp_ver, 'epoch_train', save_name))
 
     writer.close()
     print('Finishing training!')
-  
+
 if __name__ == "__main__":
     run_model(args)
 

@@ -62,7 +62,7 @@ def main(args):
         node_num = test_data['node_num']
         node_labels = test_data['node_labels']
         features = test_data['feature']
-        if node_num == 1:
+        if node_num ==0 or node_num == 1:
             print(img_name)
             continue
         # referencing

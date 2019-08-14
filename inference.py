@@ -42,7 +42,7 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, atten=None):
             # ipdb.set_trace()
             Drawer.rectangle(list(bbox), outline=(225,0,0), width=line_width)
             if raw_action is None:
-                text = metadata.hico_classes[label]
+                text = metadata.coco_classes[label]
                 if scores is not None:
                     text = text + " " + '{:.3f}'.format(scores[idx])
                     # text = text + str(idx)
@@ -79,11 +79,11 @@ def main(args):
     if (args.data is not None) and not (args.random_data):
         test_data = pickle.load(open(args.data, 'rb'))
     else:
-        data_list = sorted(os.listdir('dataset/processed/test2015'))
+        data_list = sorted(os.listdir('dataset/processed/train2015'))
         test_loader = DataLoader(dataset=data_list, batch_size=1, shuffle=True)
         # random.shuffle(nums)
         iterator = iter(test_loader)
-        test_data = pickle.load(open('dataset/processed/test2015/' + iterator.next()[0], 'rb'))
+        test_data = pickle.load(open('dataset/processed/train2015/' + iterator.next()[0], 'rb'))
 
     img_name = test_data['img_name']
     det_boxes = test_data['boxes']
@@ -117,7 +117,7 @@ def main(args):
     features = torch.FloatTensor(features).to(device)
     outputs, atten = model(node_num, features, roi_labels) 
     # show result
-    image = Image.open(os.path.join('dataset/hico/images/test2015', img_name)).convert('RGB')
+    image = Image.open(os.path.join('dataset/hico/images/train2015', img_name)).convert('RGB')
     image_temp = image.copy()
     sigmoid = nn.Sigmoid()
     raw_outputs = sigmoid(outputs)
@@ -154,12 +154,12 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='inference of the model')
 
-    parser.add_argument('--data', type=str, default='./dataset/processed/test2015/HICO_test2015_00003005.p',
+    parser.add_argument('--data', type=str, default='./dataset/processed/train2015/HICO_train2015_00010000.p',
                         help='A path to the test data is necessary.')
     parser.add_argument('--dataset', '-d', type=str, default='ucf101', choices=['ucf101','hmdb51'],
                         help='Location of the dataset: ucf101')
-    parser.add_argument('--pretrained', '-p', type=str, default='./checkpoints/checkpoint_200_epoch.pth',
-                        help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
+    parser.add_argument('--pretrained', '-p', type=str, default='./checkpoints/v1/checkpoint_200_epoch.pth',
+                        help='Location of the checkpoint file: ./checkpoints/v1/checkpoint_150_epoch.pth')
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
     parser.add_argument('--random_data', type=str2bool, default='false',
