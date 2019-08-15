@@ -125,7 +125,7 @@ class H_NodeApplyModule(nn.Module):
         self.node_fc = MLP(layer_sizes=feat_sizes, activation=node_activation, bias=bias, use_bn=use_bn, drop_prob=drop_prob)
         self.gru = nn.GRU(feat_sizes[-1], hidden_size)
         self.predictor = Predictor(hidden_size, action_num)
-    
+
     def forward(self, node):
         feat = torch.cat([node.data['n_f'], node.data['z_f']], dim=1)  
         # ipdb.set_trace()
@@ -176,10 +176,9 @@ class GNN(nn.Module):
         # ipdb.set_trace()
         return g.ndata.pop('pred'), g.ndata.pop('alpha')
 
-
 class GRNN(nn.Module):
     def __init__(self, feat_sizes=[2*1024, 1024, 1024], atten_layers=2, hidden_size=1024, action_num=117, \
-                 node_activation=['ReLU']*2, edge_activation=['ReLU']*2, atten_activation=['LeakyReLU']*2, bias=True, use_bn=True, drop_prob=None):
+                 node_activation=['ReLU']*2, edge_activation=['ReLU']*2, atten_activation=['LeakyReLU']*2, bias=True, use_bn=False, drop_prob=None):
         super(GRNN, self).__init__()
         self.gnn = GNN(feat_sizes, atten_layers, hidden_size, action_num, node_activation, edge_activation, atten_activation, bias, use_bn, drop_prob)
 

@@ -18,7 +18,7 @@ def compute_mAP(APs,hoi_ids):
 def main():
     args = parser.parse_args()
     
-    bin_to_hoi_ids = io.load_json_object('/home/birl/ml_dl_projects/bigjun/hio/no_frills_hoi_det/data_symlinks/hico_processed/bin_to_hoi_ids.json')
+    bin_to_hoi_ids = io.load_json_object('/home/birl/ml_dl_projects/bigjun/hoi/no_frills_hoi_det/data_symlinks/hico_processed/bin_to_hoi_ids.json')
     
     mAP_json = os.path.join(args.out_dir,'mAP.json')
     APs = io.load_json_object(mAP_json)['AP']

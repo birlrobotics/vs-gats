@@ -32,7 +32,8 @@ def main(args):
                                                         checkpoint['hidden_size'], checkpoint['action_num']
         print('Checkpoint loaded!')
         # set up model and initialize it with uploaded checkpoint
-        model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
+        # model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
+        model = GRNN()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
         model.eval()
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='Evalute the model')
 
-    parser.add_argument('--pretrained', '-p', type=str, default='./checkpoints/checkpoint_200_epoch.pth',
+    parser.add_argument('--pretrained', '-p', type=str, default='/home/birl/ml_dl_projects/bigjun/hoi/agrnn/checkpoints/v2/iteration_train/checkpoint_1839633_iters.pth',
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')

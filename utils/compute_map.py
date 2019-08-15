@@ -21,12 +21,12 @@ parser.add_argument(
 parser.add_argument(
     '--out_dir', 
     type=str, 
-    default='eval_result/map',
+    default='eval_result/v2/map',
     help='Output directory')
 parser.add_argument(
     '--proc_dir',
     type=str,
-    default='/home/birl/ml_dl_projects/bigjun/hio/no_frills_hoi_det/data_symlinks/hico_processed',
+    default='/home/birl/ml_dl_projects/bigjun/hoi/no_frills_hoi_det/data_symlinks/hico_processed',
     help='Path to HICO processed data directory')
 parser.add_argument(
     '--subset',
