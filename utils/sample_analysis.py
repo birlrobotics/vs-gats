@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     '--out_dir', 
     type=str, 
-    default=None,
+    default='/home/birl/ml_dl_projects/bigjun/hoi/agrnn/eval_result/v2/map',
     required=True,
     help='Output directory')
 

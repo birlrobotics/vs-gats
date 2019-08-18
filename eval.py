@@ -16,7 +16,7 @@ import torchvision
 from torch.utils.data import DataLoader
 
 from model.grnn import GRNN
-from dataset import metadata
+from datasets import metadata
 import utils.io as io
 
 def main(args):
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='Evalute the model')
 
-    parser.add_argument('--pretrained', '-p', type=str, default='/home/birl/ml_dl_projects/bigjun/hoi/agrnn/checkpoints/v2/iteration_train/checkpoint_1839633_iters.pth',
+    parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v2/iteration_train/checkpoint_1839633_iters.pth',
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')

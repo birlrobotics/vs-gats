@@ -5,11 +5,12 @@ import numpy as np
 import matplotlib
 import torch as t
 # import visdom
-import cv2
+# import cv2
 
 matplotlib.use('Agg')
 from matplotlib import pyplot as plot
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
+from datasets import metadata
 
 # VOC_BBOX_LABEL_NAMES
 VOC_BBOX_LABEL_NAMES = list([
@@ -59,35 +60,48 @@ COLORS = {
     'tv': (248,175,142), 
     }
 
-def vis_img(img, bboxs, labels, scores=None):
-    # from ndarray(c, h, w) to Image (h, w) 
-    img = Image.fromarray(img.transpose(1,2,0).astype("uint8"))
+def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8):
     try:
         if len(bboxs) == 0:
             return img    
 
         if scores is not None:
-            keep = np.where(scores > 0.7)
+            keep = np.where(scores > score_thresh)
             bboxs = bboxs[keep]
             labels = labels[keep]
             scores = scores[keep] 
-        
-        score_idx = 0 
-        line_width = 3
-        for (bbox, label) in zip(bboxs, labels):
+            if raw_action is not None:
+                raw_action = raw_action[keep]
+
+        line_width = 1
+        color = (120,0,0)
+        # build the Font object
+        font = ImageFont.truetype(font='/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=15)
+        for idx, (bbox, label) in enumerate(zip(bboxs, labels)):
             Drawer = ImageDraw.Draw(img)
             # ipdb.set_trace()
-            Drawer.rectangle(list(bbox), outline=COLORS[VOC_BBOX_LABEL_NAMES[label]], width=line_width)
-            text = VOC_BBOX_LABEL_NAMES[label]
-            if scores is None:
-                Drawer.text((bbox[0]+line_width+1, bbox[1]+line_width+1), text, COLORS[VOC_BBOX_LABEL_NAMES[label]])
+            Drawer.rectangle(list(bbox), outline=(120,0,0), width=line_width)
+            if raw_action is None:
+                text = metadata.coco_classes[label]
+                if scores is not None:
+                    text = text + " " + '{:.3f}'.format(scores[idx])
+                h, w = font.getsize(text)
+                Drawer.rectangle(xy=(bbox[0], bbox[1], bbox[0]+h+1, bbox[1]+w+1), fill=color, outline=None, width=0)
+                Drawer.text(xy=(bbox[0], bbox[1]), text=text, font=font, fill=None)
+                
             else:
-                text = text + " " + '{:.3f}'.format(scores[score_idx])
-                Drawer.text((bbox[0]+line_width+1, bbox[1]+line_width+1), text, COLORS[VOC_BBOX_LABEL_NAMES[label]], )
-                score_idx +=1
+                action_idx = np.where(raw_action[idx] > 0.5)[0]
+                text = str()
+                if len(action_idx) > 0:
+                    for i in range(len(action_idx)):
+                        text = text + " " + metadata.action_classes[action_idx[i]]
+                        h, w = font.getsize(text)
+                        Drawer.rectangle(xy=(bbox[0], bbox[1], bbox[0]+h+1, bbox[1]+w+1), fill=color, outline=None, width=0)
+                    Drawer.text(xy=(bbox[0], bbox[1]), text=text, font=font, fill=None)
         return img
+
     except Exception as e:
-        print("Error:" ,e)
+        print("Error:", e)
         print("bboxs: {}, labels: {}" .format(bboxs, labels))
     finally:
         pass

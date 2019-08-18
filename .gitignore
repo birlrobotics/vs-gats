@@ -1,7 +1,7 @@
 test_img
 checkpoints
 log
-eval_result
+__pycache__/
 
 
 *.pyc

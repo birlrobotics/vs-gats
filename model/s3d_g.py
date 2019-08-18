@@ -98,7 +98,6 @@ class sep_inc(nn.Module):
         out = torch.cat((out_0, out_1, out_2, out_3), 1)
         return out
 
-
 class S3D_G(nn.Module):
     def __init__(self, initial_temporal_size=400, in_channel=3, drop_prob=0.5, gate=True):               # (3,64,224,224)
         super(S3D_G, self).__init__()
