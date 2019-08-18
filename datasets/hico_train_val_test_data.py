@@ -61,7 +61,8 @@ def parse_data(data_const,args):
     print('Load original data successfully!')
 
     boxes_scores_rpn_ids_labels = h5py.File(data_const.boxes_scores_rpn_ids_labels, 'r')
-    boxes_fc7_feat = h5py.File(data_const.faster_det_fc7_feat, 'r')
+    # boxes_fc7_feat = h5py.File(data_const.faster_det_fc7_feat, 'r')
+    boxes_fc7_feat = h5py.File(data_const.faster_det_pool_feat, 'r')
     print('Load selected instance detection data successfully!')
 
     action_class_num = len(metadata.action_classes)
@@ -73,12 +74,12 @@ def parse_data(data_const,args):
     for phase in ['bbox_train', 'bbox_test']:
         if not args.vis_result:
             if phase == 'bbox_train':
-                print('Creating hico_trainval_data.hdf5 file ...')
-                hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data.hdf5')
+                print('Creating hico_trainval_data*.hdf5 file ...')
+                hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool.hdf5')
                 save_data = h5py.File(hdf5_file,'w')
             else:
-                print('Creating hico_test_data.hdf5...')
-                hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data.hdf5')
+                print('Creating hico_test_data.hdf5*...')
+                hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool.hdf5')
                 save_data = h5py.File(hdf5_file,'w')
 
         data = anno_data[phase]

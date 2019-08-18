@@ -95,7 +95,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs, atten = model(node_num, features, roi_labels)
+                    outputs, atten = model(node_num, features, roi_labels, feat_type='pool')
                     loss = criterion(outputs, node_labels)
                     loss.backward()
                     optimizer.step()
@@ -312,16 +312,7 @@ parser.add_argument('--print_every', type=int, default=10,
 parser.add_argument('--save_every', type=int, default=50,
                     help='number of steps for saving the model parameters: 50')                      
 parser.add_argument('--test_every', type=int, default=50,
-                    help='number of steps for testing the model: 50') 
-# for dataset processing
-parser.add_argument('--resize_height',  type=int, default=256,
-                    help='resize the height of frames before processing: 256')
-parser.add_argument('--resize_width',  type=int, default=256,
-                    help='resize the width of frames before processing: 256') 
-parser.add_argument('--crop_height',  type=int, default=224,
-                    help='crop the height of frames when processing: 224')
-parser.add_argument('--crop_width',  type=int, default=224,
-                    help='crop the widht of frames when processing: 224')   
+                    help='number of steps for testing the model: 50')  
 
 parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
                     help='the version of code, will create subdir in log/ && checkpoints/ ')

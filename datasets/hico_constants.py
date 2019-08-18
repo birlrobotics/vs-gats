@@ -57,5 +57,8 @@ class HicoConstants(io.JsonSerializableClass):
         self.iou_thresh = 0.5
 
         # train_val_test data
-        self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data.hdf5')
-        self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data.hdf5')
+        # self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
+        # self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
+
+        self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
+        self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')

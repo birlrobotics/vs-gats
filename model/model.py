@@ -14,10 +14,11 @@ class AGRNN(nn.Module):
         # self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         # self.extractor = S3D_G(initial_temporal_size=32, in_channel=3, gate=True)
         # self.grnn = GRNN(2 * 1024, 1024)
-        self.graph_head = TowMLPHead(CONFIG.G_E_L_S, CONFIG.G_H_A, CONFIG.G_H_B, CONFIG.G_H_BN, CONFIG.G_H_D)
+        self.graph_head = TowMLPHead(CONFIG.G_H_L_S, CONFIG.G_H_A, CONFIG.G_H_B, CONFIG.G_H_BN, CONFIG.G_H_D)
         self.grnn = GRNN(CONFIG)
 
     def forward(self, node_num, feat, roi_label, feat_type='fc7'):
+        # ipdb.set_trace()
         if not feat_type == 'fc7':
             feat = self.graph_head(feat)
         output, alpha = self.grnn(node_num, feat, roi_label)
