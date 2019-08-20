@@ -2,7 +2,7 @@ import os
 import argparse
 
 import utils.io as io
-# from data.hico.hico_constants import HicoConstants
+from datasets.hico_constants import HicoConstants
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -16,11 +16,13 @@ def compute_mAP(APs,hoi_ids):
     return sum([APs[hoi_id] for hoi_id in hoi_ids]) / len(hoi_ids)
 
 def main():
-    args = parser.parse_args()
     
-    bin_to_hoi_ids = io.load_json_object('/home/birl/ml_dl_projects/bigjun/hoi/no_frills_hoi_det/data_symlinks/hico_processed/bin_to_hoi_ids.json')
+    data_const = HicoConstants()
+    out_dir = data_const.result_dir+'/map'
+
+    bin_to_hoi_ids = io.load_json_object(data_const.bin_to_hoi_ids_json)
     
-    mAP_json = os.path.join(args.out_dir,'mAP.json')
+    mAP_json = os.path.join(out_dir,'mAP.json')
     APs = io.load_json_object(mAP_json)['AP']
     bin_map = {}
     bin_count = {}
@@ -41,7 +43,7 @@ def main():
     }
 
     sample_complexity_analysis_json = os.path.join(
-        args.out_dir,
+        out_dir,
         f'sample_complexity_analysis.json')
     io.dump_json_object(
         sample_complexity_analysis,

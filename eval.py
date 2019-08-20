@@ -15,11 +15,12 @@ import torch.nn as nn
 import torchvision
 from torch.utils.data import DataLoader
 
-from model.grnn import GRNN
+from model.model import AGRNN
+from datasets.hico_constants import HicoConstants
 from datasets import metadata
 import utils.io as io
 
-def main(args):
+def main(args, data_const):
     # use GPU if available else revert to CPU
     device = torch.device('cuda:0' if torch.cuda.is_available() and args.gpu else 'cpu')
     print("Testing on", device)
@@ -28,12 +29,12 @@ def main(args):
     try:
         # load checkpoint
         checkpoint = torch.load(args.pretrained, map_location=device)
-        in_feat, out_feat, hidden_size, action_num  = checkpoint['in_feat'], checkpoint['out_feat'],\
-                                                        checkpoint['hidden_size'], checkpoint['action_num']
+        # in_feat, out_feat, hidden_size, action_num  = checkpoint['in_feat'], checkpoint['out_feat'],\
+                                                        # checkpoint['hidden_size'], checkpoint['action_num']
         print('Checkpoint loaded!')
         # set up model and initialize it with uploaded checkpoint
         # model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
-        model = GRNN()
+        model = AGRNN()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
         model.eval()
@@ -43,29 +44,27 @@ def main(args):
         sys.exit(1)
     
     print('Creating hdf5 file for predicted hoi dets ...')
-    result_path = 'eval_result'
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    pred_hoi_dets_hdf5 = os.path.join(result_path, 'pred_hoi_dets.hdf5')
+    if not os.path.exists(data_const.result_dir):
+        os.mkdir(data_const.result_dir)
+    pred_hoi_dets_hdf5 = os.path.join(data_const.result_dir, 'pred_hoi_dets.hdf5')
     pred_hois = h5py.File(pred_hoi_dets_hdf5,'w')
     # print('Creating json file for predicted hoi dets ...')
-    result_path = 'eval_result'
-    io.mkdir_if_not_exists(result_path)
     hoi_box_score = {}
     # prepare for data
-    data_list = sorted(os.listdir('dataset/processed/test2015'))
-    for file_name in tqdm(data_list): 
-        test_data = pickle.load(open(f'dataset/processed/test2015/{file_name}', 'rb'))
-        img_name = test_data['img_name']
-        det_boxes = test_data['boxes']
-        roi_labels = test_data['classes']
-        roi_scores = test_data['scores']
-        node_num = test_data['node_num']
-        node_labels = test_data['node_labels']
-        features = test_data['feature']
-        if node_num ==0 or node_num == 1:
-            print(img_name)
-            continue
+    dataset_list = io.load_json_object(data_const.split_ids_json)
+    test_list = dataset_list['test']
+    test_data = h5py.File(data_const.hico_test_data, 'r')
+    for global_id in tqdm(test_list): 
+        if global_id not in test_data.keys(): continue
+        train_data = test_data[global_id]
+        img_name = global_id + '.jpg'
+        det_boxes = train_data['boxes'][:]
+        roi_labels = train_data['classes'][:]
+        roi_scores = train_data['scores'][:]
+        node_num = train_data['node_num'].value
+        node_labels = train_data['node_labels'][:]
+        features = train_data['feature'][:]
+        if node_num == 0 or node_num == 1: continue
         # referencing
         features = torch.FloatTensor(features).to(device)
         outputs, atten = model(node_num, features, roi_labels)
@@ -75,7 +74,7 @@ def main(args):
         atten = atten.cpu().detach().numpy()
         # save detection result
         # hoi_box_score[file_name.split('.')[0]] = {}
-        pred_hois.create_group(file_name.split('.')[0])
+        pred_hois.create_group(global_id)
         det_data_dict = {}
         h_idxs = np.where(roi_labels == 1)[0]
         for h_idx in h_idxs:
@@ -97,7 +96,7 @@ def main(args):
                     else:
                         det_data_dict[str(hoi_idx+1).zfill(3)] = np.vstack((det_data_dict[str(hoi_idx+1).zfill(3)], hoi_pair_score[None,:]))
         for k, v in det_data_dict.items():
-            pred_hois[file_name.split('.')[0]].create_dataset(k, data=v)
+            pred_hois[global_id].create_dataset(k, data=v)
     # io.dump_json_object(hoi_box_score, os.path.join(result_path, 'pred_hoi_dets.json'))
     # pickle.dump(hoi_box_score, open(os.path.join(result_path, 'pred_hoi_dets.p'), 'wb'))
 
@@ -117,11 +116,13 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='Evalute the model')
 
-    parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v2/iteration_train/checkpoint_1839633_iters.pth',
+    parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v2/epoch_train/checkpoint_100_epoch.pth',
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
+
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
 
     args = parser.parse_args()
+    data_const = HicoConstants()
     # inferencing
-    main(args)
+    main(args, data_const)

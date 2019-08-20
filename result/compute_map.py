@@ -11,6 +11,7 @@ from sklearn.metrics import average_precision_score, precision_recall_curve
 
 import utils.io as io
 from utils.bbox_utils import compute_iou
+from datasets.hico_constants import HicoConstants
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -21,7 +22,7 @@ parser.add_argument(
 parser.add_argument(
     '--out_dir', 
     type=str, 
-    default='eval_result/v2/map',
+    default='result/v2/map',
     help='Output directory')
 parser.add_argument(
     '--proc_dir',
@@ -39,7 +40,6 @@ parser.add_argument(
     type=int,
     default=12,
     help='Number of processes to parallelize across')   
-
 
 def match_hoi(pred_det,gt_dets):
     is_match = False
@@ -211,27 +211,28 @@ def load_gt_dets(proc_dir,global_ids_set):
 def main():
     args = parser.parse_args()
 
+    data_const = HicoConstants()
     print('Creating output dir ...')
-    io.mkdir_if_not_exists(args.out_dir,recursive=True)
+    io.mkdir_if_not_exists(data_const.result_dir+'/map',recursive=True)
 
     # Load hoi_list
-    hoi_list_json = os.path.join(args.proc_dir,'hoi_list.json')
+    hoi_list_json = os.path.join(data_const.proc_dir,'hoi_list.json')
     hoi_list = io.load_json_object(hoi_list_json)
 
     # Load subset ids to eval on
-    split_ids_json = os.path.join(args.proc_dir,'split_ids.json')
+    split_ids_json = os.path.join(data_const.proc_dir,'split_ids.json')
     split_ids = io.load_json_object(split_ids_json)
     global_ids = split_ids[args.subset]
     global_ids_set = set(global_ids)
 
     # Create gt_dets
     print('Creating GT dets ...')
-    gt_dets = load_gt_dets(args.proc_dir,global_ids_set)
+    gt_dets = load_gt_dets(data_const.proc_dir,global_ids_set)
 
     eval_inputs = []
     for hoi in hoi_list:
         eval_inputs.append(
-            (hoi['id'],global_ids,gt_dets, args.pred_hoi_dets_file, args.out_dir))
+            (hoi['id'],global_ids,gt_dets, data_const.result_dir+'/pred_hoi_dets.hdf5', data_const.result_dir+'/map'))
     
     # import ipdb; ipdb.set_trace()
     # eval_hoi(*eval_inputs[0])
@@ -263,14 +264,40 @@ def main():
     mAP['invalid'] = len(output) - count
 
     mAP_json = os.path.join(
-        args.out_dir,
+        data_const.result_dir+'/map',
         'mAP.json') 
     io.dump_json_object(mAP,mAP_json)
 
-    print(f'APs have been saved to {args.out_dir}')
-
+    print(f'APs have been saved to {data_const.result_dir}/map')
 
 if __name__=='__main__':
     main()
+    # data_const = HicoConstants()
+    # data_path = data_const.result_dir+'/map'
+    # ap_data_list = sorted(os.listdir(data_path))
+    # mAP = {
+    #     'AP': {},
+    #     'mAP': 0,
+    #     'invalid': 0,
+    # }
+    # map_ = 0
+    # count = 0
+    # for file in ap_data_list:
+    #     if not file.endswith('.npy'): continue
+    #     hoi_id = file.split("_")[0]
+    #     data = np.load(os.path.join(data_path,file))
+    #     mAP['AP'][hoi_id] = data.all()['ap']
+    #     if not np.isnan(data.all()['ap']):
+    #         count += 1
+    #         map_ += data.all()['ap']
 
+    # mAP['mAP'] = map_ / count
+    # mAP['invalid'] = 600 - count
+
+    # mAP_json = os.path.join(
+    #     data_const.result_dir+'/map',
+    #     'mAP.json') 
+    # io.dump_json_object(mAP,mAP_json)
+
+    # print(f'APs have been saved to {data_const.result_dir}/map')
     

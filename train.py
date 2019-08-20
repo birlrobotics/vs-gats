@@ -95,7 +95,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs, atten = model(node_num, features, roi_labels, feat_type='pool')
+                    outputs, atten = model(node_num, features, roi_labels, feat_type='fc7')
                     loss = criterion(outputs, node_labels)
                     loss.backward()
                     optimizer.step()
@@ -116,7 +116,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
                         class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels.cpu().numpy())
                         action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
-                        writer.add_image('class_detection', np.array(class_img).transpose(2,0,1))
+                        writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
 
                 idx+=1
@@ -143,10 +143,6 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
         if epoch % args.save_every == (args.save_every -1):
             checkpoint = { 
                           'lr': args.lr,
-                     'in_feat': 2*1024, 
-                    'out_feat': 1024,
-                 'hidden_size': 1024,
-                  'action_num': 117,
                   'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
@@ -232,7 +228,7 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
                         class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels.cpu().numpy())
                         action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
-                        writer.add_image('class_detection', np.array(class_img).transpose(2,0,1))
+                        writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
                     idx+=1
                 loss = val_loss / len(dataset['val'])
@@ -287,7 +283,7 @@ parser.add_argument('--clip_len', type=int, default=64,
                     help='set time step: 64') 
 parser.add_argument('--drop_prob', type=float, default=0.5,
                     help='dropout parameter: 0.2')
-parser.add_argument('--lr', type=float, default=0.003,
+parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 

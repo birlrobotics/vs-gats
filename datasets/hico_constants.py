@@ -8,7 +8,7 @@ class HicoConstants(io.JsonSerializableClass):
             self,
             clean_dir=os.path.join(os.getcwd(),'datasets/hico'),
             proc_dir=os.path.join(os.getcwd(),'datasets/processed/hico'),
-            res_dir=os.path.join(os.getcwd(),'result/hico')):
+            res_dir=os.path.join(os.getcwd(),'result/hico/v2')):
         self.clean_dir = clean_dir
         self.proc_dir = proc_dir
         self.result_dir = res_dir
@@ -57,8 +57,8 @@ class HicoConstants(io.JsonSerializableClass):
         self.iou_thresh = 0.5
 
         # train_val_test data
-        # self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
-        # self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
+        self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
+        self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
 
-        self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
-        self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')
+        # self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
+        # self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')
