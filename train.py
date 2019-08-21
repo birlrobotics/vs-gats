@@ -1,43 +1,45 @@
 from __future__ import print_function
-import numpy as np
-import argparse
-import os
-import glob
-import time
-from tqdm import tqdm
-import ipdb
 
-import torch
-from torch import nn, optim
-import torchvision
-from torch.utils.data import DataLoader
+import os
+import time
+
 import dgl
 import networkx as nx
-
-import pickle
-import h5py
-from PIL import Image, ImageDraw, ImageFont
+import torch
+import torchvision
+from torch import nn, optim
+from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from sklearn.model_selection import train_test_split
 
+import ipdb
+import h5py
+import pickle
+import argparse
+import numpy as np
+from tqdm import tqdm
+from PIL import Image, ImageDraw, ImageFont
+
+import utils.io as io
 from model.model import AGRNN
 from datasets import metadata
-import utils.io as io
 from utils.vis_tool import vis_img
 from datasets.hico_constants import HicoConstants
+from datasets.hico_dataset import HicoDataset, collate_fn
 
 ###########################################################################################
 #                                     TRAIN/TEST MODEL                                    #
 ###########################################################################################
 
 def run_model(args, data_const):
-    # get data file
-    trainval_list = io.load_json_object(data_const.split_ids_json) 
-    dataset = {'train': trainval_list['train'], 'val': trainval_list['val']}
-    print('load split_ids list successfully')
-    # use default DataLoader() to load the data. In this case, the dataset is a list 
-    train_dataloader = DataLoader(dataset=dataset['train'], batch_size=1, shuffle=True)
-    val_dataloader = DataLoader(dataset=dataset['val'], batch_size=1, shuffle=True)
+    # set up dataset variable
+    train_dataset = HicoDataset(data_const=data_const, subset='train')
+    val_dataset = HicoDataset(data_const=data_const, subset='val')
+    dataset = {'train': train_dataset, 'val': val_dataset}
+    print('set up dataset variable successfully')
+    # use default DataLoader() to load the data. 
+    train_dataloader = DataLoader(dataset=dataset['train'], batch_size=1, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(dataset=dataset['val'], batch_size=1, shuffle=True, collate_fn=collate_fn)
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
@@ -73,30 +75,25 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             start_time = time.time()
             running_loss = 0.0
             idx = 0
-            # for idx in tqdm(range((dataset[phase]))):
-            # for idx, file in tqdm(enumerate(dataloader[phase])): 
-            for file in tqdm(dataloader[phase]): 
-                if file[0] not in trainval_data.keys(): continue
-                train_data = trainval_data[file[0]]
-                img_name = file[0] + '.jpg'
-                det_boxes = train_data['boxes'][:]
-                roi_labels = train_data['classes'][:]
-                roi_scores = train_data['scores'][:]
-                node_num = train_data['node_num'].value
-                node_labels = train_data['node_labels'][:]
-                features = train_data['feature'][:]
-                if node_num == 0 or node_num == 1: continue
-                # ipdb.set_trace()    
-                features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
 
-                # nx.draw(graph.to_networkx(), node_size=500, with_labels=True, node_color='#00FFFF')
-                # plt.show()
+            for data in tqdm(dataloader[phase]): 
+                train_data = data
                 # ipdb.set_trace()
+                img_name = train_data['img_name'][0]
+                det_boxes = train_data['det_boxes'][0]
+                roi_labels = train_data['roi_labels'][0]
+                roi_scores = train_data['roi_scores'][0]
+                node_num = train_data['node_num'][0]
+                node_labels = train_data['node_labels']
+                features = train_data['features']   
+                # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+                features, node_labels = features.to(device), node_labels.to(device)
+               
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
                     outputs, atten = model(node_num, features, roi_labels, feat_type='fc7')
-                    loss = criterion(outputs, node_labels)
+                    loss = criterion(outputs, node_labels.float())
                     loss.backward()
                     optimizer.step()
                 else:
@@ -104,7 +101,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     # turn off the gradients for vaildation, save memory and computations
                     with torch.no_grad():
                         outputs, atten = model(node_num, features, roi_labels)
-                        loss = criterion(outputs, node_labels)
+                        loss = criterion(outputs, node_labels.float())
 
                     # print result every 1000 iterationa during validation
                     if idx==0 or idx%1000==999:
@@ -163,23 +160,21 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
     for epoch in range(args.epoch):
         start_time = time.time()
         running_loss = 0.0
-        for file in tqdm(dataloader['train']): 
-            if file[0] not in trainval_data.keys(): continue
-            train_data = train_data = trainval_data[file[0]]
-            img_name = file[0] + '.jpg'
-            det_boxes = train_data['boxes'][:]
-            roi_labels = train_data['classes'][:]
-            roi_scores = train_data['scores'][:]
-            node_num = train_data['node_num'].value
-            node_labels = train_data['node_labels'][:]
-            features = train_data['feature'][:]
-            if node_num == 0 or node_num == 1: continue
-            features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+        for data in tqdm(dataloader['train']): 
+            train_data = data
+            img_name = train_data['img_name'][0]
+            det_boxes = train_data['det_boxes'][0]
+            roi_labels = train_data['roi_labels'][0]
+            roi_scores = train_data['roi_scores'][0]
+            node_num = train_data['node_num'][0]
+            node_labels = train_data['node_labels']
+            features = train_data['features']   
+            features, node_labels = features.to(device), node_labels.to(device)
             # training
             model.train()
             model.zero_grad()
             outputs, atten = model(node_num, features, roi_labels)
-            loss = criterion(outputs, node_labels)
+            loss = criterion(outputs, node_labels.float())
             loss.backward()
             optimizer.step()
             # loss.backward()
@@ -196,27 +191,22 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                 num_samples = 2500
                 val_loss = 0
                 idx = 0
-                for file in tqdm(dataloader['val']):
-                    if file not in trainval_data.keys(): continue
-                    # if idx > num_samples:
-                    #     break
-                    train_data = train_data = trainval_data[file]
-                    img_name = file[0] + '.jpg'
-                    det_boxes = train_data['boxes'][:]
-                    roi_labels = train_data['classes'][:]
-                    roi_scores = train_data['scores'][:]
-                    node_num = train_data['node_num'].value
-                    node_labels = train_data['node_labels'][:]
-                    features = train_data['feature'][:]
-                    if node_num == 1: 
-                        continue 
-
-                    features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+                for data in tqdm(dataloader['val']):
+                    train_data = data
+                    img_name = train_data['img_name'][0]
+                    det_boxes = train_data['det_boxes'][0]
+                    roi_labels = train_data['roi_labels'][0]
+                    roi_scores = train_data['roi_scores'][0]
+                    node_num = train_data['node_num'][0]
+                    node_labels = train_data['node_labels']
+                    features = train_data['features']   
+        
+                    features, node_labels = features.to(device), node_labels.to(device)
                     # training
                     model.eval()
                     model.zero_grad()
                     outputs, atten = model(node_num, features, roi_labels)
-                    loss = criterion(outputs, node_labels)
+                    loss = criterion(outputs, node_labels.float())
                     val_loss += loss.item() * node_labels.shape[0]
 
                     if idx==0 or idx%1000 == 999:

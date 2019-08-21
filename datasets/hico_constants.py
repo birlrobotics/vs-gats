@@ -59,6 +59,7 @@ class HicoConstants(io.JsonSerializableClass):
         # train_val_test data
         self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
         self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
+        self.bad_faster_rcnn_det_ids = os.path.join(self.result_dir, 'bad_faster_rcnn_det_imgs.json')
 
         # self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
         # self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')

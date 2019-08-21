@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from collections import OrderedDict
-import ipdb
 from model.utils import MLP, Predictor
+import ipdb
 
 class H_H_EdgeApplyMoudle(nn.Module):
     def __init__(self, CONFIG):
@@ -135,31 +135,26 @@ class GRNN(nn.Module):
         super(GRNN, self).__init__()
         self.gnn = GNN(CONFIG)
 
-    def forward(self, node_num, node_feat, roi_label):
-        # set up graph
-        # ipdb.set_trace()
+    @staticmethod
+    def _build_graph(node_num, roi_label):
+
         graph = dgl.DGLGraph()
         graph.add_nodes(node_num)
-        # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
-        if node_num == 1:
-            print("just one node. no edges")     
-        else:
-            edge_list = []
-            for src in range(node_num):
-                for dst in range(node_num):
-                    if src == dst:
-                        continue
-                    else:
-                        edge_list.append((src, dst))
-            src, dst = tuple(zip(*edge_list))
-            graph.add_edges(src, dst)   # make the graph bi-directional
+        
+        edge_list = []
+        for src in range(node_num):
+            for dst in range(node_num):
+                if src == dst:
+                    continue
+                else:
+                    edge_list.append((src, dst))
+        src, dst = tuple(zip(*edge_list))
+        graph.add_edges(src, dst)   # make the graph bi-directional
 
         # get human nodes && object nodes
         h_node = np.where(roi_label == 1)
         obj_node = np.where(roi_label != 1)
 
-        # if h_node[0].shape[0] == 2:
-        #     ipdb.set_trace()
         # get h_h edges && h_o edges && o_o edges
         h_h_e_list = []
         for src in h_node[0]:
@@ -173,9 +168,16 @@ class GRNN(nn.Module):
                 o_o_e_list.append((src, dst))
         h_o_e_list = [x for x in edge_list if x not in h_h_e_list+o_o_e_list]
 
+        return graph, h_node[0], obj_node[0], h_h_e_list, o_o_e_list, h_o_e_list
+
+    def forward(self, node_num, node_feat, roi_label):
+        # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
+        # set up graph
+        # ipdb.set_trace()
+        graph, h_node, obj_node, h_h_e_list, o_o_e_list, h_o_e_list = self._build_graph(node_num, roi_label)
         graph.ndata['n_f'] = node_feat
         try:
-            output, alpha = self.gnn(graph, h_node[0], obj_node[0], h_h_e_list, o_o_e_list, h_o_e_list)
+            output, alpha = self.gnn(graph, h_node, obj_node, h_h_e_list, o_o_e_list, h_o_e_list)
         except Exception as e:
             print(e)
             ipdb.set_trace()
