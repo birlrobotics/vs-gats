@@ -17,13 +17,16 @@ class AGRNN(nn.Module):
         self.graph_head = TowMLPHead(CONFIG.G_H_L_S, CONFIG.G_H_A, CONFIG.G_H_B, CONFIG.G_H_BN, CONFIG.G_H_D)
         self.grnn = GRNN(CONFIG)
 
-    def forward(self, node_num, feat, roi_label, feat_type='fc7'):
+    def forward(self, node_num, feat, roi_label, feat_type='fc7', validation=False):
         # ipdb.set_trace()
         if not feat_type == 'fc7':
             feat = self.graph_head(feat)
-        output, alpha = self.grnn(node_num, feat, roi_label)
-
-        return output, alpha
+        if self.training or validation:
+            output = self.grnn(node_num, feat, roi_label, validation)
+            return output
+        else:
+            output, alpha = self.grnn(node_num, feat, roi_label)
+            return output, alpha
 
 if __name__ == "__main__":
     model = AGRNN()

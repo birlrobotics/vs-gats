@@ -106,7 +106,12 @@ class GNN(nn.Module):
         alpha = F.softmax(nodes.mailbox['a_feat'], dim=1)
         # z = torch.sum(torch.mul(alpha.repeat(1,1,1024), nodes.mailbox['nei_n_f']), dim=1).squeeze()
         z = torch.sum( alpha * nodes.mailbox['nei_n_f'], dim=1)
-        return {'z_f': z, 'alpha': alpha}
+        # when training batch_graph, here will process batch_graph graph by graph, we cannot return 'alpha' for 
+        # the different dimension 
+        if self.training or validation:
+            return {'z_f': z}
+        else:
+            return {'z_f': z, 'alpha': alpha}
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list):
         # ipdb.set_trace()
@@ -128,7 +133,10 @@ class GNN(nn.Module):
             g.apply_nodes(self.apply_o_node, o_node)
 
         # ipdb.set_trace()
-        return g.ndata.pop('pred'), g.ndata.pop('alpha')
+        if self.training or validation:
+            return g.ndata.pop('pred')
+        else:
+            return g.ndata.pop('pred'), g.ndata.pop('alpha')
 
 class GRNN(nn.Module):
     def __init__(self, CONFIG):
@@ -136,7 +144,7 @@ class GRNN(nn.Module):
         self.gnn = GNN(CONFIG)
 
     @staticmethod
-    def _build_graph(node_num, roi_label):
+    def _build_graph(node_num, roi_label, node_space):
 
         graph = dgl.DGLGraph()
         graph.add_nodes(node_num)
@@ -152,33 +160,65 @@ class GRNN(nn.Module):
         graph.add_edges(src, dst)   # make the graph bi-directional
 
         # get human nodes && object nodes
-        h_node = np.where(roi_label == 1)
-        obj_node = np.where(roi_label != 1)
+        h_node_list = np.where(roi_label == 1)[0]
+        obj_node_list = np.where(roi_label != 1)[0]
 
         # get h_h edges && h_o edges && o_o edges
         h_h_e_list = []
-        for src in h_node[0]:
-            for dst in h_node[0]:
+        for src in h_node_list:
+            for dst in h_node_list:
                 if src == dst: continue
                 h_h_e_list.append((src, dst))
         o_o_e_list = []
-        for src in obj_node[0]:
-            for dst in obj_node[0]:
+        for src in obj_node_list:
+            for dst in obj_node_list:
                 if src == dst: continue
                 o_o_e_list.append((src, dst))
         h_o_e_list = [x for x in edge_list if x not in h_h_e_list+o_o_e_list]
 
-        return graph, h_node[0], obj_node[0], h_h_e_list, o_o_e_list, h_o_e_list
+        # ipdb.set_trace()
+        # add node space to match the batch graph
+        h_node_list = (np.array(h_node_list)+node_space).tolist()
+        obj_node_list = (np.array(obj_node_list)+node_space).tolist()
+        h_h_e_list = (np.array(h_h_e_list)+node_space).tolist()
+        o_o_e_list = (np.array(o_o_e_list)+node_space).tolist()
+        h_o_e_list = (np.array(h_o_e_list)+node_space).tolist()
 
-    def forward(self, node_num, node_feat, roi_label):
+        return graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list
+
+    def forward(self, node_num, node_feat, roi_label, valid=False):
         # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
         # set up graph
         # ipdb.set_trace()
-        graph, h_node, obj_node, h_h_e_list, o_o_e_list, h_o_e_list = self._build_graph(node_num, roi_label)
-        graph.ndata['n_f'] = node_feat
+        global validation 
+        validation = valid
+
+        batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list= [], [], [], [], [], []
+        for i in range(len(node_num)):
+            # set node space
+            node_space = 0
+            if i != 0:
+                node_space = node_num[i-1]
+            graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list = self._build_graph(node_num[i], roi_label[i], node_space)
+            # updata batch graph
+            batch_graph.append(graph)
+            batch_h_node_list += h_node_list
+            batch_obj_node_list += obj_node_list
+            batch_h_h_e_list += h_h_e_list
+            batch_o_o_e_list += o_o_e_list
+            batch_h_o_e_list += h_o_e_list
+    
+        batch_graph = dgl.batch(batch_graph)
+        # batch_graph = batch_graph[0]
+        batch_graph.ndata['n_f'] = node_feat
         try:
-            output, alpha = self.gnn(graph, h_node, obj_node, h_h_e_list, o_o_e_list, h_o_e_list)
+            if self.training or validation:
+                output = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
+                return output
+            else:
+                output, alpha = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
+                return output, alpha
         except Exception as e:
             print(e)
             ipdb.set_trace()
-        return output, alpha
+        

@@ -38,8 +38,8 @@ def run_model(args, data_const):
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
     # use default DataLoader() to load the data. 
-    train_dataloader = DataLoader(dataset=dataset['train'], batch_size=1, shuffle=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(dataset=dataset['val'], batch_size=1, shuffle=True, collate_fn=collate_fn)
+    train_dataloader = DataLoader(dataset=dataset['train'], batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(dataset=dataset['val'], batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
@@ -63,8 +63,6 @@ def run_model(args, data_const):
 def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, device, data_const):
     print('epoch training...')
     
-    trainval_data = h5py.File(data_const.hico_trainval_data, 'r')
-    print('load train data successfully...')
     # set visualization and create folder to save checkpoints
     writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'epoch_train')
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'epoch_train'), recursive=True)
@@ -79,40 +77,41 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             for data in tqdm(dataloader[phase]): 
                 train_data = data
                 # ipdb.set_trace()
-                img_name = train_data['img_name'][0]
-                det_boxes = train_data['det_boxes'][0]
-                roi_labels = train_data['roi_labels'][0]
-                roi_scores = train_data['roi_scores'][0]
-                node_num = train_data['node_num'][0]
+                img_name = train_data['img_name']
+                det_boxes = train_data['det_boxes']
+                roi_labels = train_data['roi_labels']
+                roi_scores = train_data['roi_scores']
+                node_num = train_data['node_num']
                 node_labels = train_data['node_labels']
                 features = train_data['features']   
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
                 features, node_labels = features.to(device), node_labels.to(device)
                
+                # if idx == 100: break    
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs, atten = model(node_num, features, roi_labels, feat_type='fc7')
+                    outputs = model(node_num, features, roi_labels, feat_type='fc7')
                     loss = criterion(outputs, node_labels.float())
                     loss.backward()
                     optimizer.step()
                 else:
                     model.eval()
-                    # turn off the gradients for vaildation, save memory and computations
+                    # turn off the gradients for validation, save memory and computations
                     with torch.no_grad():
-                        outputs, atten = model(node_num, features, roi_labels)
+                        outputs = model(node_num, features, roi_labels, validation=True)
                         loss = criterion(outputs, node_labels.float())
 
                     # print result every 1000 iterationa during validation
                     if idx==0 or idx%1000==999:
-                        image = Image.open(os.path.join(args.img_data, img_name)).convert('RGB')
+                        # ipdb.set_trace()
+                        image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
                         image_temp = image.copy()
-                        sigmoid = nn.Sigmoid()
-                        raw_outputs = sigmoid(outputs)
+                        raw_outputs = nn.Sigmoid()(outputs[0:int(node_num[0])])
                         raw_outputs = raw_outputs.cpu().detach().numpy()
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-                        class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels.cpu().numpy())
-                        action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
+                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], node_labels[0:int(node_num[0])].cpu().numpy(), score_thresh=0.7)
+                        action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.7)
                         writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
 
@@ -150,8 +149,6 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
 
 def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler, device, data_const):
     print('iteration training...')
-    trainval_data = h5py.File(data_const.hico_trainval_data, 'r')
-    print('load train data successfully...')
 
     # # set visualization and create folder to save checkpoints
     writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'iteration_train')
@@ -162,18 +159,18 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
         running_loss = 0.0
         for data in tqdm(dataloader['train']): 
             train_data = data
-            img_name = train_data['img_name'][0]
-            det_boxes = train_data['det_boxes'][0]
-            roi_labels = train_data['roi_labels'][0]
-            roi_scores = train_data['roi_scores'][0]
-            node_num = train_data['node_num'][0]
+            img_name = train_data['img_name']
+            det_boxes = train_data['det_boxes']
+            roi_labels = train_data['roi_labels']
+            roi_scores = train_data['roi_scores']
+            node_num = train_data['node_num']
             node_labels = train_data['node_labels']
             features = train_data['features']   
             features, node_labels = features.to(device), node_labels.to(device)
             # training
             model.train()
             model.zero_grad()
-            outputs, atten = model(node_num, features, roi_labels)
+            outputs = model(node_num, features, roi_labels)
             loss = criterion(outputs, node_labels.float())
             loss.backward()
             optimizer.step()
@@ -193,11 +190,11 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                 idx = 0
                 for data in tqdm(dataloader['val']):
                     train_data = data
-                    img_name = train_data['img_name'][0]
-                    det_boxes = train_data['det_boxes'][0]
-                    roi_labels = train_data['roi_labels'][0]
-                    roi_scores = train_data['roi_scores'][0]
-                    node_num = train_data['node_num'][0]
+                    img_name = train_data['img_name']
+                    det_boxes = train_data['det_boxes']
+                    roi_labels = train_data['roi_labels']
+                    roi_scores = train_data['roi_scores']
+                    node_num = train_data['node_num']
                     node_labels = train_data['node_labels']
                     features = train_data['features']   
         
@@ -205,19 +202,18 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                     # training
                     model.eval()
                     model.zero_grad()
-                    outputs, atten = model(node_num, features, roi_labels)
+                    outputs = model(node_num, features, roi_labels, validation=True)
                     loss = criterion(outputs, node_labels.float())
                     val_loss += loss.item() * node_labels.shape[0]
 
                     if idx==0 or idx%1000 == 999:
-                        image = Image.open(os.path.join(args.img_data, img_name)).convert('RGB')
+                        image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
                         image_temp = image.copy()
-                        sigmoid = nn.Sigmoid()
-                        raw_outputs = sigmoid(outputs)
+                        raw_outputs = nn.Sigmoid()(outputs[0:int(node_num[0])])
                         raw_outputs = raw_outputs.cpu().detach().numpy()
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-                        class_img = vis_img(image, det_boxes, roi_labels, roi_scores, node_labels.cpu().numpy())
-                        action_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, raw_outputs)
+                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], node_labels[0:int(node_num[0])].cpu().numpy())
+                        action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs)
                         writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
                     idx+=1
@@ -227,10 +223,6 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                 # save model
                 checkpoint = { 
                             'lr': args.lr,
-                        'in_feat': 2*1024, 
-                        'out_feat': 1024,
-                    'hidden_size': 1024,
-                    'action_num': 117,
                     'state_dict': model.state_dict()
                 }
                 save_name = "checkpoint_" + str(iter+1) + '_iters.pth'
@@ -267,8 +259,8 @@ def str2bool(arg):
 
 parser = argparse.ArgumentParser(description="separable 3D CNN for action classification!")
 
-parser.add_argument('--batch_size', type=int, default=2,
-                    help='batch size: 10')
+parser.add_argument('--batch_size', '--b_s', type=int, default=2,
+                    help='batch size: 2')
 parser.add_argument('--clip_len', type=int, default=64,
                     help='set time step: 64') 
 parser.add_argument('--drop_prob', type=float, default=0.5,
