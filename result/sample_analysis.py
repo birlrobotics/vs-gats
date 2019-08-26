@@ -9,15 +9,17 @@ parser.add_argument(
     '--out_dir', 
     type=str, 
     default='/home/birl/ml_dl_projects/bigjun/hoi/agrnn/eval_result/v2/map',
-    required=True,
     help='Output directory')
+
+parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+                        help='the version of code, will create subdir in log/ && checkpoints/ ')
 
 def compute_mAP(APs,hoi_ids):
     return sum([APs[hoi_id] for hoi_id in hoi_ids]) / len(hoi_ids)
 
 def main():
-    
-    data_const = HicoConstants()
+    args = parser.parse_args()
+    data_const = HicoConstants(exp_ver=args.exp_ver)
     out_dir = data_const.result_dir+'/map'
 
     bin_to_hoi_ids = io.load_json_object(data_const.bin_to_hoi_ids_json)

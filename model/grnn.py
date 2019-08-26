@@ -106,8 +106,8 @@ class GNN(nn.Module):
         alpha = F.softmax(nodes.mailbox['a_feat'], dim=1)
         # z = torch.sum(torch.mul(alpha.repeat(1,1,1024), nodes.mailbox['nei_n_f']), dim=1).squeeze()
         z = torch.sum( alpha * nodes.mailbox['nei_n_f'], dim=1)
-        # when training batch_graph, here will process batch_graph graph by graph, we cannot return 'alpha' for 
-        # the different dimension 
+        # when training batch_graph, here will process batch_graph graph by graph, 
+        # we cannot return 'alpha' for the different dimension 
         if self.training or validation:
             return {'z_f': z}
         else:
@@ -194,11 +194,12 @@ class GRNN(nn.Module):
         validation = valid
 
         batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list= [], [], [], [], [], []
+        node_num_cum = np.cumsum(node_num) # !IMPORTANT
         for i in range(len(node_num)):
             # set node space
             node_space = 0
             if i != 0:
-                node_space = node_num[i-1]
+                node_space = node_num_cum[i-1]
             graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list = self._build_graph(node_num[i], roi_label[i], node_space)
             # updata batch graph
             batch_graph.append(graph)

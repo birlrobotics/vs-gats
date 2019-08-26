@@ -29,6 +29,7 @@ class HicoDataset(Dataset):
         return subset_ids
 
     def _load_subset_app_data(self, subset):
+        print(f'Using {self.data_const.feat_type} feature...')
         if subset == 'train' or subset == 'val' or subset == 'train_val':
             return h5py.File(self.data_const.hico_trainval_data, 'r')
         elif subset == 'test':
@@ -55,6 +56,7 @@ class HicoDataset(Dataset):
 
         return data
 
+# for DatasetLoader
 def collate_fn(batch):
     '''
         Default collate_fn(): https://github.com/pytorch/pytorch/blob/1d53d0756668ce641e4f109200d9c65b003d05fa/torch/utils/data/_utils/collate.py#L43

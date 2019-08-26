@@ -5,21 +5,23 @@ import torchvision
 from model.graph_head import TowMLPHead, ResBlockHead
 from model.s3d_g import S3D_G
 from model.grnn import GRNN
-import model.config as CONFIG
+from model.config import CONFIGURATION
 import ipdb
 
 class AGRNN(nn.Module):
-    def __init__(self):
+    def __init__(self, feat_type='fc7'):
         super(AGRNN, self).__init__()
         # self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         # self.extractor = S3D_G(initial_temporal_size=32, in_channel=3, gate=True)
         # self.grnn = GRNN(2 * 1024, 1024)
-        self.graph_head = TowMLPHead(CONFIG.G_H_L_S, CONFIG.G_H_A, CONFIG.G_H_B, CONFIG.G_H_BN, CONFIG.G_H_D)
-        self.grnn = GRNN(CONFIG)
+        self.CONFIG = CONFIGURATION(feat_type=feat_type)
+        if not feat_type=='fc7':
+            self.graph_head = TowMLPHead(self.CONFIG.G_H_L_S, self.CONFIG.G_H_A, self.CONFIG.G_H_B, self.CONFIG.G_H_BN, self.CONFIG.G_H_D)
+        self.grnn = GRNN(self.CONFIG)
 
-    def forward(self, node_num, feat, roi_label, feat_type='fc7', validation=False):
+    def forward(self, node_num, feat, roi_label, validation=False):
         # ipdb.set_trace()
-        if not feat_type == 'fc7':
+        if not self.CONFIG.feat_type == 'fc7':
             feat = self.graph_head(feat)
         if self.training or validation:
             output = self.grnn(node_num, feat, roi_label, validation)

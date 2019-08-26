@@ -46,14 +46,25 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN()
+    model = AGRNN(feat_type=args.feat_type)
+    # load pretrained model
+    if args.pretrained:
+        print(f"loading pretrained model {args.pretrained}")
+        checkpoints = torch.load(args.pretrained, map_location=device)
+        model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
-
     # # build optimizer && criterion  
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
+
+    # get the configuration of the model and save some key configurations
+    model_config = model.CONFIG.save_config()
+    model_config['lr'] = args.lr
+    model_config['bs'] = args.batch_size
+    io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'config.json'))
+    print('save key configurations successfully...')
 
     if args.train_model == 'epoch':
         epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, device, data_const)
@@ -67,7 +78,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
     writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'epoch_train')
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'epoch_train'), recursive=True)
 
-    for epoch in range(args.epoch):
+    for epoch in range(args.start_epoch, args.epoch):
         # each epoch has a training and validation step
         for phase in ['train', 'val']:
             start_time = time.time()
@@ -91,7 +102,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs = model(node_num, features, roi_labels, feat_type='fc7')
+                    outputs = model(node_num, features, roi_labels)
                     loss = criterion(outputs, node_labels.float())
                     loss.backward()
                     optimizer.step()
@@ -103,7 +114,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         loss = criterion(outputs, node_labels.float())
 
                     # print result every 1000 iterationa during validation
-                    if idx==0 or idx%1000==999:
+                    if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
                         # ipdb.set_trace()
                         image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
                         image_temp = image.copy()
@@ -139,6 +150,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
         if epoch % args.save_every == (args.save_every -1):
             checkpoint = { 
                           'lr': args.lr,
+                         'b_s': args.batch_size,
                   'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
@@ -223,6 +235,7 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                 # save model
                 checkpoint = { 
                             'lr': args.lr,
+                           'b_s': args.batch_size,
                     'state_dict': model.state_dict()
                 }
                 save_name = "checkpoint_" + str(iter+1) + '_iters.pth'
@@ -276,7 +289,7 @@ parser.add_argument('--test', type=str2bool, default='true',
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
                     help='location of the original dataset')
-parser.add_argument('--pretrained', type=str, default='',
+parser.add_argument('--pretrained', '-p', type=str, default=None,
                     help='location of the pretrained model file for training: None')
 parser.add_argument('--log_dir', type=str, default='./log',
                     help='path to save the log data like loss\accuracy... : ./log') 
@@ -285,9 +298,11 @@ parser.add_argument('--save_dir', type=str, default='./checkpoints',
 
 parser.add_argument('--epoch', type=int, default=300,
                     help='number of epochs to train: 300') 
+parser.add_argument('--start_epoch', type=int, default=0,
+                    help='number of beginning epochs : 0') 
 parser.add_argument('--print_every', type=int, default=10,
                     help='number of steps for printing training and validation loss: 10') 
-parser.add_argument('--save_every', type=int, default=50,
+parser.add_argument('--save_every', type=int, default=20,
                     help='number of steps for saving the model parameters: 50')                      
 parser.add_argument('--test_every', type=int, default=50,
                     help='number of steps for testing the model: 50')  
@@ -299,10 +314,13 @@ parser.add_argument('--train_model', '--t_m', type=str, default='epoch', require
                     choices=['epoch', 'iteration'],
                     help='the version of code, will create subdir in log/ && checkpoints/ ')
 
+parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
+                    help='if using graph head, here should be pool: default(fc7) ')
+
 args = parser.parse_args() 
 
 if __name__ == "__main__":
-    data_const = HicoConstants()
+    data_const = HicoConstants(feat_type=args.feat_type)
     run_model(args, data_const)
 
 

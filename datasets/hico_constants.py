@@ -2,16 +2,18 @@ import os
 
 import utils.io as io
 
-
 class HicoConstants(io.JsonSerializableClass):
     def __init__(
             self,
             clean_dir=os.path.join(os.getcwd(),'datasets/hico'),
             proc_dir=os.path.join(os.getcwd(),'datasets/processed/hico'),
-            res_dir=os.path.join(os.getcwd(),'result/hico/v2')):
+            res_dir=os.path.join(os.getcwd(),'result/hico'),
+            feat_type='fc7',
+            exp_ver ='test'):
         self.clean_dir = clean_dir
         self.proc_dir = proc_dir
-        self.result_dir = res_dir
+        self.result_dir = res_dir + '/' + exp_ver
+        self.feat_type = feat_type
 
         # Clean constants
         self.anno_bbox_mat = os.path.join(self.clean_dir,'anno_bbox.mat')
@@ -57,9 +59,10 @@ class HicoConstants(io.JsonSerializableClass):
         self.iou_thresh = 0.5
 
         # train_val_test data
-        self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
-        self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
-        self.bad_faster_rcnn_det_ids = os.path.join(self.result_dir, 'bad_faster_rcnn_det_imgs.json')
-
-        # self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
-        # self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')
+        self.bad_faster_rcnn_det_ids = os.path.join('result', 'bad_faster_rcnn_det_imgs.json')
+        if self.feat_type == 'fc7':
+            self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7.hdf5')
+            self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7.hdf5')
+        else:
+            self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
+            self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')

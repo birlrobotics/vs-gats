@@ -34,7 +34,7 @@ def main(args, data_const):
         print('Checkpoint loaded!')
         # set up model and initialize it with uploaded checkpoint
         # model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
-        model = AGRNN()
+        model = AGRNN(feat_type=args.feat_type)
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
         model.eval()
@@ -67,7 +67,7 @@ def main(args, data_const):
         if node_num == 0 or node_num == 1: continue
         # referencing
         features = torch.FloatTensor(features).to(device)
-        outputs, atten = model(node_num, features, roi_labels)
+        outputs, atten = model([node_num], features, [roi_labels])
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()
@@ -116,13 +116,19 @@ if __name__ == "__main__":
     # set some arguments
     parser = argparse.ArgumentParser(description='Evalute the model')
 
-    parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v2/epoch_train/checkpoint_100_epoch.pth',
+    parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v3_2048/epoch_train/checkpoint_300_epoch.pth', #default='checkpoints/v3_2048/epoch_train/checkpoint_300_epoch.pth',
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
 
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
 
+    parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
+                        help='if using graph head, here should be pool: default(fc7) ')
+
+    parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+                        help='the version of code, will create subdir in log/ && checkpoints/ ')
+
     args = parser.parse_args()
-    data_const = HicoConstants()
+    data_const = HicoConstants(feat_type=args.feat_type, exp_ver=args.exp_ver)
     # inferencing
     main(args, data_const)

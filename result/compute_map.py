@@ -39,7 +39,11 @@ parser.add_argument(
     '--num_processes',
     type=int,
     default=12,
-    help='Number of processes to parallelize across')   
+    help='Number of processes to parallelize across')  
+
+parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+                        help='the version of code, will create subdir in log/ && checkpoints/ ')
+
 
 def match_hoi(pred_det,gt_dets):
     is_match = False
@@ -211,7 +215,7 @@ def load_gt_dets(proc_dir,global_ids_set):
 def main():
     args = parser.parse_args()
 
-    data_const = HicoConstants()
+    data_const = HicoConstants(exp_ver=args.exp_ver)
     print('Creating output dir ...')
     io.mkdir_if_not_exists(data_const.result_dir+'/map',recursive=True)
 

@@ -53,6 +53,7 @@ def get_node_index(classname, bbox, det_classes, det_boxes, node_num, labeled=Tr
                 max_iou_index = i_node
     return max_iou_index
 
+
 def parse_data(data_const,args):
 
     assert os.path.exists(data_const.clean_dir), 'Please check the path to annotion file!'
@@ -72,6 +73,7 @@ def parse_data(data_const,args):
     bad_dets_imgs = {'0': [], '1': []} 
     # parsing data
     for phase in ['bbox_train', 'bbox_test']:
+
         if not args.vis_result:
             if phase == 'bbox_train':
                 print('Creating hico_trainval_data*.hdf5 file ...')
@@ -146,7 +148,7 @@ def parse_data(data_const,args):
                         y1 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y1'][0, j][0, 0]
                         x2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x2'][0, j][0, 0]
                         y2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y2'][0, j][0, 0]
-                        human_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=False)
+                        human_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=args.labeled)
 
                         if args.vis_result:
                             raw_action[action_id] = 1
@@ -157,7 +159,7 @@ def parse_data(data_const,args):
                         y1 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y1'][0, j][0, 0]
                         x2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['x2'][0, j][0, 0]
                         y2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y2'][0, j][0, 0]
-                        obj_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=False)
+                        obj_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=args.labeled)
 
                         if args.vis_result:
                             image_gt = vis_img(image_gt, [[x1,y1,x2,y2]], [metadata.coco_classes.index(classname)], raw_action=[raw_action])
@@ -167,6 +169,7 @@ def parse_data(data_const,args):
                             node_labels[obj_index, action_id] = 1
                 except IndexError:
                     pass
+            # visualizing result instead of saving result
             if args.vis_result:
                 # ipdb.set_trace()
                 image_res = Image.open(os.path.join(data_const.clean_dir, 'images/train2015', img_name)).convert('RGB')
@@ -195,7 +198,7 @@ def parse_data(data_const,args):
             save_data.close()
     # create file to save images with no selected detection
     print(f"bad instance detection: <0 det>---{len(bad_dets_imgs['0'])}, <1 det>---{len(bad_dets_imgs['1'])}")
-    io.dump_json_object(bad_dets_imgs, os.path.join(data_const.result_dir, 'bad_faster_rcnn_det_imgs.json'))
+    io.dump_json_object(bad_dets_imgs, os.path.join('result', 'bad_faster_rcnn_det_imgs.json'))
 
     print('Finished parsing datas!')    
 
@@ -233,6 +236,8 @@ if __name__ == "__main__":
                         help='visualize the result or not')
     parse.add_argument('--frcnn', action="store_true", default=False,
                         help='visualize the result or not')
+    parse.add_argument('--labeled', action="store_true", default=False,
+                        help='take instance detection label into account when getting node index')
 
     args = parse.parse_args()
     if args.frcnn:
