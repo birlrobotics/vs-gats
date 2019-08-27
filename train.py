@@ -46,7 +46,7 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN(feat_type=args.feat_type)
+    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob)
     # load pretrained model
     if args.pretrained:
         print(f"loading pretrained model {args.pretrained}")
@@ -60,10 +60,20 @@ def run_model(args, data_const):
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
-    model_config = model.CONFIG.save_config()
-    model_config['lr'] = args.lr
-    model_config['bs'] = args.batch_size
-    io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'config.json'))
+    io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
+    for i in range(args.layers):
+        if i==0:
+            model_config = model.CONFIG1.save_config()
+            model_config['lr'] = args.lr
+            model_config['bs'] = args.batch_size
+            model_config['layers'] = args.layers
+            io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
+        elif i==1:
+            model_config = model.CONFIG2.save_config()
+            io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l2_config.json'))
+        else:
+            model_config = model.CONFIG3.save_config()
+            io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l3_config.json'))
     print('save key configurations successfully...')
 
     if args.train_model == 'epoch':
@@ -236,6 +246,10 @@ def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler,
                 checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,
+                          'bias': args.bias, 
+                            'bn': args.bn, 
+                       'dropout': args.drop_prob,
+                     'feat_type': args.feat_type,
                     'state_dict': model.state_dict()
                 }
                 save_name = "checkpoint_" + str(iter+1) + '_iters.pth'
@@ -274,18 +288,22 @@ parser = argparse.ArgumentParser(description="separable 3D CNN for action classi
 
 parser.add_argument('--batch_size', '--b_s', type=int, default=2,
                     help='batch size: 2')
-parser.add_argument('--clip_len', type=int, default=64,
-                    help='set time step: 64') 
-parser.add_argument('--drop_prob', type=float, default=0.5,
-                    help='dropout parameter: 0.2')
+parser.add_argument('--layers', type=int, default=3,
+                    help='the num of gcn layers: 3') 
+parser.add_argument('--drop_prob', type=float, default=None,
+                    help='dropout parameter: None')
 parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
-parser.add_argument('--test', type=str2bool, default='true',
-                    help="test the model during traing: True")
-#  parser.add_argument('--clip', type=int, default=4,
-#                      help='gradient clipping: 4')
+parser.add_argument('--bias', type=str2bool, default='true',
+                    help="add bias to fc layers or not: True")
+parser.add_argument('--bn', type=str2bool, default='true',
+                    help='use batch normailzation or not: true')
+# parse.add_argument('--bn', action="store_true", default=False,
+#                     help='visualize the result or not')
+parser.add_argument('--clip', type=int, default=4,
+                     help='gradient clipping: 4')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
                     help='location of the original dataset')
