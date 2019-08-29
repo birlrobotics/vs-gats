@@ -52,8 +52,7 @@ class H_NodeApplyModule(nn.Module):
         # self.predictor = Predictor(CONFIG.G_N_GRU, CONFIG.ACTION_NUM)
     
     def forward(self, node):
-        feat = torch.cat([node.data['n_f'], node.data['z_f']], dim=1)  
-        # ipdb.set_trace()
+        feat = torch.cat([node.data['n_f'], node.data['z_f']], dim=1)
         n_feat = self.node_fc(feat)
         # pred = self.predictor(n_feat)
         # return {'pred': pred}
@@ -110,7 +109,7 @@ class GNN(nn.Module):
             return {'z_f': z, 'alpha': alpha}
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list, pop_feat=False):
-        # ipdb.set_trace()
+        
         if not len(h_h_e_list) == 0:
             g.apply_edges(self.apply_h_h_edge, tuple(zip(*h_h_e_list)))
         # ipdb.set_trace()
@@ -126,7 +125,7 @@ class GNN(nn.Module):
             g.apply_nodes(self.apply_h_node, h_node)
         if not len(o_node) == 0:
             g.apply_nodes(self.apply_o_node, o_node)
-        
+
         if pop_feat:
             # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
             g.ndata.pop('n_f')

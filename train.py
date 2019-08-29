@@ -54,8 +54,9 @@ def run_model(args, data_const):
         model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
     # # build optimizer && criterion  
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
     # criterion = nn.MultiLabelSoftMarginLoss()
+    # ipdb.set_trace()
     criterion = nn.BCEWithLogitsLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
@@ -159,9 +160,13 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
         # save model
         if epoch % args.save_every == (args.save_every -1):
             checkpoint = { 
-                          'lr': args.lr,
-                         'b_s': args.batch_size,
-                  'state_dict': model.state_dict()
+                            'lr': args.lr,
+                           'b_s': args.batch_size,
+                          'bias': args.bias, 
+                            'bn': args.bn, 
+                       'dropout': args.drop_prob,
+                     'feat_type': args.feat_type,
+                    'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
             torch.save(checkpoint, os.path.join(args.save_dir, args.exp_ver, 'epoch_train', save_name))
