@@ -17,7 +17,7 @@ class CONFIGURATION(object):
         if feat_type=='fc7':
             if layer==1:
                 # # gnn node function
-                self.G_N_L_S = [1024*2, 1024, 512]
+                self.G_N_L_S = [1024*2, 1024, 1024]
                 self.G_N_A   = ['ReLU', 'ReLU']
                 self.G_N_B   = bias
                 self.G_N_BN  = bn
@@ -25,21 +25,21 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [1024*2, 1024]
+                self.G_E_L_S = [1024*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn
                 self.G_E_D   = dropout
 
                 # gnn attention mechanism
-                self.G_A_L_S = [1024, 1]
+                self.G_A_L_S = [512, 1]
                 self.G_A_A   = ['LeakyReLU']
                 self.G_A_B   = bias
                 self.G_A_BN  = bn
                 self.G_A_D   = dropout
             elif layer==2:
                 # # gnn node function
-                self.G_N_L_S = [512*2, 512, 512]
+                self.G_N_L_S = [1024*2, 1024, 1024]
                 self.G_N_A   = ['ReLU','ReLU']
                 self.G_N_B   = bias
                 self.G_N_BN  = bn   
@@ -47,7 +47,7 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [512*2, 512]
+                self.G_E_L_S = [1024*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn
@@ -61,7 +61,7 @@ class CONFIGURATION(object):
                 self.G_A_D   = dropout
             else :
                 # # gnn node function
-                self.G_N_L_S = [512*2, 512]
+                self.G_N_L_S = [1024*2, 1024]
                 self.G_N_A   = ['ReLU']
                 self.G_N_B   = bias
                 self.G_N_BN  = bn   
@@ -69,7 +69,7 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [512*2, 512]
+                self.G_E_L_S = [1024*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn
@@ -92,21 +92,21 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [2048*2, 1024]
+                self.G_E_L_S = [2048*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn
                 self.G_E_D   = dropout
 
                 # gnn attention mechanism
-                self.G_A_L_S = [1024, 1]
+                self.G_A_L_S = [512, 1]
                 self.G_A_A   = ['LeakyReLU']
                 self.G_A_B   = bias
                 self.G_A_BN  = bn
                 self.G_A_D   = dropout
             elif layer==2:
                 # gnn node function
-                self.G_N_L_S = [1024*2, 512, 512]
+                self.G_N_L_S = [1024*2, 1024, 1024]
                 self.G_N_A   = ['ReLU', 'ReLU']
                 self.G_N_B   = bias
                 self.G_N_BN  = bn
@@ -114,21 +114,21 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [1024*2, 1024]
+                self.G_E_L_S = [1024*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn
                 self.G_E_D   = dropout
 
                 # gnn attention mechanism
-                self.G_A_L_S = [1024, 1]
+                self.G_A_L_S = [512, 1]
                 self.G_A_A   = ['LeakyReLU']
                 self.G_A_B   = bias
                 self.G_A_BN  = bn
                 self.G_A_D   = dropout
             else :
                 # # gnn node function
-                self.G_N_L_S = [512*2, 512]
+                self.G_N_L_S = [1024*2, 1024]
                 self.G_N_A   = ['ReLU']
                 self.G_N_B   = bias
                 self.G_N_BN  = bn   
@@ -136,7 +136,7 @@ class CONFIGURATION(object):
                 self.G_N_GRU = 1024
 
                 # gnn edge function
-                self.G_E_L_S = [512*2, 512]
+                self.G_E_L_S = [1024*2, 512]
                 self.G_E_A   = ['ReLU']
                 self.G_E_B   = bias
                 self.G_E_BN  = bn

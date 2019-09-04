@@ -66,3 +66,7 @@ class HicoConstants(io.JsonSerializableClass):
         else:
             self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_pool.hdf5')
             self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_pool.hdf5')
+        
+        # spatial features
+        self.trainval_spatial_feat = os.path.join(self.proc_dir, 'trainval_spatial_features.hdf5')
+        self.test_spatial_feat = os.path.join(self.proc_dir, 'test_spatial_features.hdf5')

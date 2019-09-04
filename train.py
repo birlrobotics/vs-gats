@@ -293,7 +293,7 @@ parser = argparse.ArgumentParser(description="separable 3D CNN for action classi
 
 parser.add_argument('--batch_size', '--b_s', type=int, default=2,
                     help='batch size: 2')
-parser.add_argument('--layers', type=int, default=3,
+parser.add_argument('--layers', type=int, default=3, required=True,
                     help='the num of gcn layers: 3') 
 parser.add_argument('--drop_prob', type=float, default=None,
                     help='dropout parameter: None')

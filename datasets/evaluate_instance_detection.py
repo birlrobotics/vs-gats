@@ -189,12 +189,12 @@ def box_label_recall(gt_hois,human_boxes,object_boxes,object_labels,iou_thresh,h
 
     
 def evaluate_boxes(data_const):
-    select_boxes_dir = data_const.proc_dir
+    # select_boxes_dir = data_const.proc_dir
 
-    select_boxes_h5py = os.path.join(
-        select_boxes_dir,
-        'selected_coco_cls_dets.hdf5')
-    select_boxes = h5py.File(select_boxes_h5py)
+    # select_boxes_h5py = os.path.join(
+    #     select_boxes_dir,
+    #     'selected_coco_cls_dets.hdf5')
+    select_boxes = h5py.File(data_const.boxes_scores_rpn_ids_labels)
 
     print('Loading anno_list.json ...')
     anno_list = io.load_json_object(data_const.anno_list_json)
@@ -283,18 +283,18 @@ def evaluate_boxes(data_const):
     io.mkdir_if_not_exists(data_const.result_dir, recursive=True)
     evaluation_stats_json = os.path.join(
         data_const.result_dir,
-        f'eval_stats_boxes.json')
+        f'eval_stats_boxes_0.1eval.json')
 
     io.dump_json_object(evaluation_stats,evaluation_stats_json)
     
 
 def evaluate_boxes_and_labels(data_const):
-    select_boxes_dir = data_const.proc_dir
+    # select_boxes_dir = data_const.proc_dir
 
-    select_boxes_h5py = os.path.join(
-        select_boxes_dir,
-        'selected_coco_cls_dets.hdf5')
-    select_boxes = h5py.File(select_boxes_h5py)
+    # select_boxes_h5py = os.path.join(
+    #     select_boxes_dir,
+    #     'selected_coco_cls_dets.hdf5')
+    select_boxes = h5py.File(data_const.boxes_scores_rpn_ids_labels)
 
     print('Loading anno_list.json ...')
     anno_list = io.load_json_object(data_const.anno_list_json)
@@ -383,7 +383,7 @@ def evaluate_boxes_and_labels(data_const):
     io.mkdir_if_not_exists(data_const.result_dir, recursive=True)
     evaluation_stats_json = os.path.join(
         data_const.result_dir,
-        f'eval_stats_boxes_labels.json')
+        f'eval_stats_boxes_labels_0.1eval.json')
 
     io.dump_json_object(evaluation_stats,evaluation_stats_json)
 

@@ -119,12 +119,17 @@ def select(data_const):
     anno_list = io.load_json_object(data_const.anno_list_json)
 
     print('Creating selected_coco_cls_dets.hdf5 file ...')
-    hdf5_file = os.path.join(select_boxes_dir,'selected_coco_cls_dets.hdf5')
+    hdf5_file = os.path.join(select_boxes_dir,'selected_coco_cls_dets_0.1eval.hdf5')
     f = h5py.File(hdf5_file,'w')
 
     print('Selecting boxes ...')
     for anno in tqdm(anno_list):
         global_id = anno['global_id']
+
+        # # get more detection for evaluation
+        # if 'test' in global_id:
+        #     data_const.human_score_thresh = 0.1
+        #     data_const.object_score_thresh = 0.1
 
         boxes_npy = os.path.join(
             data_const.faster_rcnn_boxes,

@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader
 
 from model.model import AGRNN
 from datasets.hico_constants import HicoConstants
+from datasets.hico_dataset import HicoDataset, collate_fn
 from datasets import metadata
 import utils.io as io
 
@@ -45,31 +46,36 @@ def main(args, data_const):
         print('Failed to load checkpoint or construct model!', e)
         sys.exit(1)
     
-    print('Creating hdf5 file for predicted hoi dets ...')
+    print('Creating hdf5 file for predicting hoi dets ...')
     if not os.path.exists(data_const.result_dir):
         os.mkdir(data_const.result_dir)
     pred_hoi_dets_hdf5 = os.path.join(data_const.result_dir, 'pred_hoi_dets.hdf5')
     pred_hois = h5py.File(pred_hoi_dets_hdf5,'w')
-    # print('Creating json file for predicted hoi dets ...')
-    hoi_box_score = {}
-    # prepare for data
-    dataset_list = io.load_json_object(data_const.split_ids_json)
-    test_list = dataset_list['test']
-    test_data = h5py.File(data_const.hico_test_data, 'r')
-    for global_id in tqdm(test_list): 
-        if global_id not in test_data.keys(): continue
-        train_data = test_data[global_id]
-        img_name = global_id + '.jpg'
-        det_boxes = train_data['boxes'][:]
-        roi_labels = train_data['classes'][:]
-        roi_scores = train_data['scores'][:]
-        node_num = train_data['node_num'].value
-        node_labels = train_data['node_labels'][:]
-        features = train_data['feature'][:]
-        if node_num == 0 or node_num == 1: continue
+    # # print('Creating json file for predicted hoi dets ...')
+    # hoi_box_score = {}
+    # # prepare for data
+    # dataset_list = io.load_json_object(data_const.split_ids_json)
+    # test_list = dataset_list['test']
+    # test_data = h5py.File(data_const.hico_test_data, 'r')
+    test_dataset = HicoDataset(data_const=data_const, subset='test')
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
+    # for global_id in tqdm(test_list): 
+    for data in tqdm(test_dataloader):
+        # if global_id not in test_data.keys(): continue
+        # train_data = test_data[global_id]
+        train_data = data
+        global_id = train_data['global_id'][0]
+        img_name = train_data['img_name']
+        det_boxes = train_data['det_boxes']
+        roi_labels = train_data['roi_labels']
+        roi_scores = train_data['roi_scores']
+        node_num = train_data['node_num']
+        node_labels = train_data['node_labels']
+        features = train_data['features']  
+
         # referencing
         features = torch.FloatTensor(features).to(device)
-        outputs, atten = model([node_num], features, [roi_labels])
+        outputs, atten = model(node_num, features, roi_labels)
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()

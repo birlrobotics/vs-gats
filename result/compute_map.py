@@ -211,7 +211,6 @@ def load_gt_dets(proc_dir,global_ids_set):
 
     return gt_dets
 
-
 def main():
     args = parser.parse_args()
 
