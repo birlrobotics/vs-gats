@@ -48,6 +48,23 @@ class HicoDataset(Dataset):
             print('Please double check the name of subset!!!')
             sys.exit(1)
 
+    def get_obj_one_hot(self,node_ids):
+        num_cand = len(node_ids)
+        obj_one_hot = np.zeros([num_cand,80])
+        for i, node_id in enumerate(node_ids):
+            obj_idx = int(node_id)-1
+            obj_one_hot[i,obj_idx] = 1.0
+        return obj_one_hot
+
+    # def get_verb_one_hot(self,hoi_ids):
+    #     num_cand = len(hoi_ids)
+    #     verb_one_hot = np.zeros([num_cand,len(self.verb_to_id)])
+    #     for i, hoi_id in enumerate(hoi_ids):
+    #         verb_id = self.verb_to_id[self.hoi_dict[hoi_id]['verb']]
+    #         verb_idx = int(verb_id)-1
+    #         verb_one_hot[i,verb_idx] = 1.0
+    #     return verb_one_hot
+
     def __len__(self):
         return len(self.subset_ids)
 
@@ -66,7 +83,8 @@ class HicoDataset(Dataset):
         data['node_labels'] = single_app_data['node_labels'][:]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
-
+        data['node_one_hot'] = self.get_obj_one_hot(data['roi_labels'])
+        # import ipdb; ipdb.set_trace()
         return data
 
 # for DatasetLoader
@@ -84,6 +102,7 @@ def collate_fn(batch):
     batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
+    batch_data['node_one_hot'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
         batch_data['img_name'].append(data['img_name'])
@@ -93,11 +112,13 @@ def collate_fn(batch):
         batch_data['node_num'].append(data['node_num'])
         batch_data['node_labels'].append(data['node_labels'])
         batch_data['features'].append(data['features'])
-        # batch_data['spatial_feat'].append(data['spatial_feat'])
+        batch_data['spatial_feat'].append(data['spatial_feat'])
+        batch_data['node_one_hot'].append(data['node_one_hot'])
 
     # import ipdb; ipdb.set_trace()
     batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
-    # batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
+    batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
+    batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
 
     return batch_data

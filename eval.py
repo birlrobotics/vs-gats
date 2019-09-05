@@ -107,7 +107,6 @@ def main(args, data_const):
             pred_hois[global_id].create_dataset(k, data=v)
     # io.dump_json_object(hoi_box_score, os.path.join(result_path, 'pred_hoi_dets.json'))
     # pickle.dump(hoi_box_score, open(os.path.join(result_path, 'pred_hoi_dets.p'), 'wb'))
-
     pred_hois.close()
 
 def str2bool(arg):

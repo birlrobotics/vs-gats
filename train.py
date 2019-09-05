@@ -105,15 +105,17 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 roi_scores = train_data['roi_scores']
                 node_num = train_data['node_num']
                 node_labels = train_data['node_labels']
-                features = train_data['features']   
+                features = train_data['features']
+                spatial_feat = train_data['spatial_feat']
+                node_one_hot = train_data['node_one_hot']
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
-                features, node_labels = features.to(device), node_labels.to(device)
+                features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
                
                 # if idx == 100: break    
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
-                    outputs = model(node_num, features, roi_labels)
+                    outputs = model(node_num, features, spatial_feat, node_one_hot, roi_labels)
                     loss = criterion(outputs, node_labels.float())
                     loss.backward()
                     optimizer.step()
@@ -121,7 +123,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     model.eval()
                     # turn off the gradients for validation, save memory and computations
                     with torch.no_grad():
-                        outputs = model(node_num, features, roi_labels, validation=True)
+                        outputs = model(node_num, features, spatial_feat, node_one_hot, roi_labels, validation=True)
                         loss = criterion(outputs, node_labels.float())
 
                     # print result every 1000 iterationa during validation

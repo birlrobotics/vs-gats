@@ -86,7 +86,7 @@ def parse_data(data_const,args):
 
         data = anno_data[phase]
         if args.vis_result:
-            img_list = [23,44,50,53,72,75,79,93,109,127,129,138,139,490,496]
+            img_list = [1761,23,44,50,53,72,75,79,93,109,127,129,138,139,490,496]
         else:
             img_list = range(data.shape[1])
 
@@ -178,8 +178,10 @@ def parse_data(data_const,args):
                 plt.suptitle(img_name)
                 plt.subplot(1,2,1)
                 plt.imshow(np.array(image_gt))
+                plt.title('all_ground_truth')
                 plt.subplot(1,2,2)
                 plt.imshow(np.array(result))
+                plt.title('select_ground_truth')
                 # plt.axis('off')
                 plt.ion()
                 plt.pause(10)
@@ -241,7 +243,7 @@ if __name__ == "__main__":
 
     args = parse.parse_args()
     if args.frcnn:
-        faster_rcnn_det_result('HICO_train2015_00000045.jpg')
+        faster_rcnn_det_result('HICO_train2015_00001762.jpg')
     else:
         data_const = HicoConstants()
         # parse training data

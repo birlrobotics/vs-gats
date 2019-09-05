@@ -144,14 +144,16 @@ class GRNN(nn.Module):
         super(GRNN, self).__init__()
         self.gnn = GNN(CONFIG)
 
-    def forward(self, batch_graph, node_feat, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
+    def forward(self, batch_graph, node_feat, spatial_feat, node_one_hot, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
         # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
-        # ipdb.set_trace()
+        ipdb.set_trace()
         global validation 
         validation = valid
 
         # batch_graph = batch_graph[0]
         batch_graph.ndata['n_f'] = node_feat
+        batch_graph.ndata['one_hot'] = node_one_hot
+        batch_graph.edata['s_f'] = spatial_feat
         try:
             if pop_feat:
                 feat = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)
