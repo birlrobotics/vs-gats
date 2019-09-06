@@ -54,9 +54,10 @@ def run_model(args, data_const):
         model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
     # # build optimizer && criterion  
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
-    # criterion = nn.MultiLabelSoftMarginLoss()
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr,weight_decay=0)
     # ipdb.set_trace()
+    # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 

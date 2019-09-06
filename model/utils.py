@@ -23,7 +23,7 @@ def get_activation(name):
         assert(False), 'Not Implemented'
 
 class MLP(nn.Module):
-    def __init__(self, layer_sizes, activation, bias=True, use_bn=True, drop_prob=None):
+    def __init__(self, layer_sizes, activation, bias=True, use_bn=False, drop_prob=None):
         '''
         Args:
              layer_sizes: a list, the size of each layer you want to construct: [1024,1024,...]
