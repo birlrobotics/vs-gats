@@ -43,7 +43,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob)
@@ -54,8 +54,8 @@ def run_model(args, data_const):
         model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
     # # build optimizer && criterion  
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr,weight_decay=0)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()

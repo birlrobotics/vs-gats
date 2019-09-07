@@ -10,29 +10,38 @@ class H_H_EdgeApplyMoudle(nn.Module):
     def __init__(self, CONFIG):
         super(H_H_EdgeApplyMoudle, self).__init__()
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
+        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
+
+        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        e_feat2 = self.edge_fc2(feat2)
         
-        return {'e_f': e_feat}    
+        return {'e_f': e_feat, 'e_f2': e_feat2}    
 
 class O_O_EdgeApplyMoudle(nn.Module):
     def __init__(self, CONFIG):
         super(O_O_EdgeApplyMoudle, self).__init__()
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
+        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
     
     def forward(self, edge):
         # ipdb.set_trace()
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
-        return {'e_f': e_feat}  
+        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        e_feat2 = self.edge_fc2(feat2)
+        
+        return {'e_f': e_feat, 'e_f2': e_feat2}    
 
 class H_O_EdgeApplyMoudle(nn.Module):
     def __init__(self, CONFIG):
         super(H_O_EdgeApplyMoudle, self).__init__()
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
+        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
         # self.attn_fc = MLP(CONFIG.G_A_L_S, CONFIG.G_A_A, CONFIG.G_A_B, CONFIG.G_E_BN, CONFIG.G_A_D)
     
     def forward(self, edge):
@@ -42,7 +51,10 @@ class H_O_EdgeApplyMoudle(nn.Module):
         # a_feat = self.attn_fc(e_feat)
         # # alpha = F.softmax(a_feat, dim=1)
         # return {'e_f': e_feat, 'a_feat': a_feat} 
-        return {'e_f': e_feat}    
+        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        e_feat2 = self.edge_fc2(feat2)
+        
+        return {'e_f': e_feat, 'e_f2': e_feat2}    
 
 class H_NodeApplyModule(nn.Module):
     def __init__(self, CONFIG):
@@ -87,8 +99,9 @@ class E_AttentionModule2(nn.Module):
         self.attn_fc2 = MLP(CONFIG.G_A_L_S2, CONFIG.G_A_A2, CONFIG.G_A_B2, CONFIG.G_A_BN2, CONFIG.G_A_D2)
 
     def forward(self, edge):
-        feat = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
-        a_feat2 = self.attn_fc2(feat)
+        # feat = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        # a_feat2 = self.attn_fc2(feat)
+        a_feat2 = self.attn_fc2(edge.data['e_f2'])
 
         return {'a_feat2': a_feat2}
 
@@ -105,7 +118,7 @@ class GNN(nn.Module):
 
     def _message_func(self, edges):
         # ipdb.set_trace()
-        return {'nei_n_f': edges.src['n_f'], 'nei_one_hot': edges.src['one_hot'], 's_feat': edges.data['s_f'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
+        return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
 
     def _reduce_func(self, nodes):
         # calculate the features of virtual nodes 
@@ -114,7 +127,7 @@ class GNN(nn.Module):
         alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
         alpha = (alpha1+alpha2)/2
         # z = torch.sum(torch.mul(alpha.repeat(1,1,1024), nodes.mailbox['nei_n_f']), dim=1).squeeze()
-        z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['nei_one_hot'], nodes.mailbox['s_feat']], dim=2)
+        z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2']], dim=2)
         z_f = torch.sum( alpha * z_raw_f, dim=1)
         # when training batch_graph, here will process batch_graph graph by graph, 
         # we cannot return 'alpha' for the different dimension 

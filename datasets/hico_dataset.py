@@ -14,7 +14,7 @@ class HicoDataset(Dataset):
     Args:
         subset: ['train', 'val', 'train_val', 'test']
     '''
-    def __init__(self, data_const=HicoConstants(), subset='train',):
+    def __init__(self, data_const=HicoConstants(), subset='train'):
         super(HicoDataset, self).__init__()
         self.data_const = data_const
         self.subset_ids = self._load_subset_ids(subset)
