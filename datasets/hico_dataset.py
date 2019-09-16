@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import utils.io as io 
 from datasets.hico_constants import HicoConstants
+from datasets import metadata
 
 import sys
 
@@ -20,6 +21,7 @@ class HicoDataset(Dataset):
         self.subset_ids = self._load_subset_ids(subset)
         self.sub_app_data = self._load_subset_app_data(subset)
         self.sub_spatial_data = self._load_subset_spatial_data(subset)
+        self.word2vec = h5py.File(self.data_const.word2vec, 'r')
 
     def _load_subset_ids(self, subset):
         global_ids = io.load_json_object(self.data_const.split_ids_json)
@@ -56,6 +58,13 @@ class HicoDataset(Dataset):
             obj_one_hot[i,obj_idx] = 1.0
         return obj_one_hot
 
+    def get_word2vec(self,node_ids):
+        word2vec = np.empty((0,300))
+        for node_id in node_ids:
+            vec = self.word2vec[metadata.coco_classes[node_id]]
+            word2vec = np.vstack((word2vec, vec))
+        return word2vec
+
     # def get_verb_one_hot(self,hoi_ids):
     #     num_cand = len(hoi_ids)
     #     verb_one_hot = np.zeros([num_cand,len(self.verb_to_id)])
@@ -84,6 +93,7 @@ class HicoDataset(Dataset):
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
         data['node_one_hot'] = self.get_obj_one_hot(data['roi_labels'])
+        data['word2vec'] = self.get_word2vec(data['roi_labels'])
         # import ipdb; ipdb.set_trace()
         return data
 
@@ -103,6 +113,7 @@ def collate_fn(batch):
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
     batch_data['node_one_hot'] = []
+    batch_data['word2vec'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
         batch_data['img_name'].append(data['img_name'])
@@ -114,11 +125,13 @@ def collate_fn(batch):
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
         batch_data['node_one_hot'].append(data['node_one_hot'])
+        batch_data['word2vec'].append(data['word2vec'])
 
     # import ipdb; ipdb.set_trace()
     batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
     batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
+    batch_data['word2vec'] = torch.FloatTensor(np.concatenate(batch_data['word2vec'], axis=0))
 
     return batch_data

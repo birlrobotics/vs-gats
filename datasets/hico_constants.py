@@ -70,3 +70,6 @@ class HicoConstants(io.JsonSerializableClass):
         # spatial features
         self.trainval_spatial_feat = os.path.join(self.proc_dir, 'trainval_spatial_features.hdf5')
         self.test_spatial_feat = os.path.join(self.proc_dir, 'test_spatial_features.hdf5')
+
+        # word2vec
+        self.word2vec = os.path.join(self.proc_dir, 'hico_word2vec.hdf5')

@@ -303,4 +303,3 @@ if __name__=='__main__':
     # io.dump_json_object(mAP,mAP_json)
 
     # print(f'APs have been saved to {data_const.result_dir}/map')
-    

@@ -119,7 +119,8 @@ def select(data_const):
     anno_list = io.load_json_object(data_const.anno_list_json)
 
     print('Creating selected_coco_cls_dets.hdf5 file ...')
-    hdf5_file = os.path.join(select_boxes_dir,'selected_coco_cls_dets_0.1eval.hdf5')
+    # hdf5_file = os.path.join(select_boxes_dir,'selected_coco_cls_dets_0.1eval.hdf5')
+    hdf5_file = os.path.join(select_boxes_dir,'selected_coco_cls_dets.hdf5')
     f = h5py.File(hdf5_file,'w')
 
     print('Selecting boxes ...')

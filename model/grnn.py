@@ -140,7 +140,6 @@ class GNN(nn.Module):
         
         if not len(h_h_e_list) == 0:
             g.apply_edges(self.apply_h_h_edge, tuple(zip(*h_h_e_list)))
-
         # ipdb.set_trace()
         if not len(o_o_e_list) == 0:
             g.apply_edges(self.apply_o_o_edge, tuple(zip(*o_o_e_list)))

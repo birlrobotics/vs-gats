@@ -43,7 +43,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob)
@@ -59,7 +59,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)

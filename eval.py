@@ -21,7 +21,7 @@ from datasets.hico_dataset import HicoDataset, collate_fn
 from datasets import metadata
 import utils.io as io
 
-def main(args, data_const):
+def main(args):
     # use GPU if available else revert to CPU
     device = torch.device('cuda:0' if torch.cuda.is_available() and args.gpu else 'cpu')
     print("Testing on", device)
@@ -33,6 +33,8 @@ def main(args, data_const):
         # in_feat, out_feat, hidden_size, action_num  = checkpoint['in_feat'], checkpoint['out_feat'],\
                                                         # checkpoint['hidden_size'], checkpoint['action_num']
         print('Checkpoint loaded!')
+
+        data_const = HicoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
         # set up model and initialize it with uploaded checkpoint
         # model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
         # ipdb.set_trace()
@@ -65,21 +67,26 @@ def main(args, data_const):
         # train_data = test_data[global_id]
         train_data = data
         global_id = train_data['global_id'][0]
-        img_name = train_data['img_name']
-        det_boxes = train_data['det_boxes']
-        roi_labels = train_data['roi_labels']
-        roi_scores = train_data['roi_scores']
+        img_name = train_data['img_name'][0]
+        det_boxes = train_data['det_boxes'][0]
+        roi_labels = train_data['roi_labels'][0]
+        roi_scores = train_data['roi_scores'][0]
         node_num = train_data['node_num']
-        node_labels = train_data['node_labels']
-        features = train_data['features']  
+        # node_labels = train_data['node_labels']
+        features = train_data['features'] 
+        spatial_feat = train_data['spatial_feat']
+        node_one_hot = train_data['node_one_hot'] 
+        
+        # if node_num ==0 or node_num ==1: continue
 
         # referencing
-        features = torch.FloatTensor(features).to(device)
-        outputs, atten = model(node_num, features, roi_labels)
+        features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
+        outputs, atten = model(node_num, features, spatial_feat, node_one_hot, roi_labels)
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()
         atten = atten.cpu().detach().numpy()
+        # import ipdb; ipdb.set_trace()
         # save detection result
         # hoi_box_score[file_name.split('.')[0]] = {}
         pred_hois.create_group(global_id)
@@ -121,7 +128,7 @@ def str2bool(arg):
 
 if __name__ == "__main__":
     # set some arguments
-    parser = argparse.ArgumentParser(description='Evalute the model')
+    parser = argparse.ArgumentParser(description='Evaluate the model')
 
     parser.add_argument('--pretrained', '-p', type=str, default='checkpoints/v3_2048/epoch_train/checkpoint_300_epoch.pth', #default='checkpoints/v3_2048/epoch_train/checkpoint_300_epoch.pth',
                         help='Location of the checkpoint file: ./checkpoints/checkpoint_150_epoch.pth')
@@ -129,13 +136,13 @@ if __name__ == "__main__":
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
 
-    parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
-                        help='if using graph head, here should be pool: default(fc7) ')
+    # parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
+    #                     help='if using graph head, here should be pool: default(fc7) ')
 
     parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
                         help='the version of code, will create subdir in log/ && checkpoints/ ')
 
     args = parser.parse_args()
-    data_const = HicoConstants(feat_type=args.feat_type, exp_ver=args.exp_ver)
+    # data_const = HicoConstants(feat_type=args.feat_type, exp_ver=args.exp_ver)
     # inferencing
-    main(args, data_const)
+    main(args)
