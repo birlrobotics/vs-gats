@@ -112,7 +112,7 @@ def collate_fn(batch):
     batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
-    batch_data['node_one_hot'] = []
+    # batch_data['node_one_hot'] = []
     batch_data['word2vec'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
@@ -124,14 +124,14 @@ def collate_fn(batch):
         batch_data['node_labels'].append(data['node_labels'])
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
-        batch_data['node_one_hot'].append(data['node_one_hot'])
+        # batch_data['node_one_hot'].append(data['node_one_hot'])
         batch_data['word2vec'].append(data['word2vec'])
 
     # import ipdb; ipdb.set_trace()
     batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
-    batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
+    # batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
     batch_data['word2vec'] = torch.FloatTensor(np.concatenate(batch_data['word2vec'], axis=0))
 
     return batch_data

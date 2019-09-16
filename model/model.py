@@ -85,7 +85,7 @@ class AGRNN(nn.Module):
 
         return graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list
 
-    def forward(self, node_num=None, feat=None, spatial_feat=None, node_one_hot=None, roi_label=None, validation=False):
+    def forward(self, node_num=None, feat=None, spatial_feat=None, word2vec=None, roi_label=None, validation=False):
         # set up graph
         batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list= [], [], [], [], [], []
         node_num_cum = np.cumsum(node_num) # !IMPORTANT
@@ -110,7 +110,7 @@ class AGRNN(nn.Module):
         # ipdb.set_trace()
         # feat = self.grnn1(batch_graph, feat, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
         # feat = self.grnn2(batch_graph, feat, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
-        self.grnn1(batch_graph, feat, spatial_feat, node_one_hot, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation)
+        self.grnn1(batch_graph, feat, spatial_feat, word2vec, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation)
         # apply READOUT function to get predictions
         if not len(batch_h_node_list) == 0:
             batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)

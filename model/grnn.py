@@ -16,7 +16,7 @@ class H_H_EdgeApplyMoudle(nn.Module):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
-        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
         e_feat2 = self.edge_fc2(feat2)
         
         return {'e_f': e_feat, 'e_f2': e_feat2}    
@@ -32,7 +32,7 @@ class O_O_EdgeApplyMoudle(nn.Module):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
-        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
         e_feat2 = self.edge_fc2(feat2)
         
         return {'e_f': e_feat, 'e_f2': e_feat2}    
@@ -51,7 +51,7 @@ class H_O_EdgeApplyMoudle(nn.Module):
         # a_feat = self.attn_fc(e_feat)
         # # alpha = F.softmax(a_feat, dim=1)
         # return {'e_f': e_feat, 'a_feat': a_feat} 
-        feat2 = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
         e_feat2 = self.edge_fc2(feat2)
         
         return {'e_f': e_feat, 'e_f2': e_feat2}    
@@ -99,7 +99,7 @@ class E_AttentionModule2(nn.Module):
         self.attn_fc2 = MLP(CONFIG.G_A_L_S2, CONFIG.G_A_A2, CONFIG.G_A_B2, CONFIG.G_A_BN2, CONFIG.G_A_D2)
 
     def forward(self, edge):
-        # feat = torch.cat([edge.src['one_hot'], edge.data['s_f'], edge.dst['one_hot']], dim=1)
+        # feat = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
         # a_feat2 = self.attn_fc2(feat)
         a_feat2 = self.attn_fc2(edge.data['e_f2'])
 
@@ -160,7 +160,7 @@ class GNN(nn.Module):
             # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
             g.ndata.pop('n_f')
             g.ndata.pop('z_f')
-            g.ndata.pop('one_hot')
+            g.ndata.pop('word2vec')
             g.edata.pop('s_f')
             g.edata.pop('e_f')
             g.edata.pop('a_feat')
@@ -177,7 +177,7 @@ class GRNN(nn.Module):
         super(GRNN, self).__init__()
         self.gnn = GNN(CONFIG)
 
-    def forward(self, batch_graph, node_feat, spatial_feat, node_one_hot, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
+    def forward(self, batch_graph, node_feat, spatial_feat, word2vec, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
         # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
         # ipdb.set_trace()
         global validation 
@@ -185,7 +185,7 @@ class GRNN(nn.Module):
 
         # batch_graph = batch_graph[0]
         batch_graph.ndata['n_f'] = node_feat
-        batch_graph.ndata['one_hot'] = node_one_hot
+        batch_graph.ndata['word2vec'] = word2vec
         batch_graph.edata['s_f'] = spatial_feat
         try:
             if pop_feat:
