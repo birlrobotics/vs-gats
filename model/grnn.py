@@ -7,54 +7,61 @@ from model.utils import MLP, Predictor
 import ipdb
 
 class H_H_EdgeApplyMoudle(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, multi_attn):
         super(H_H_EdgeApplyMoudle, self).__init__()
+        self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
-        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
+        if multi_attn:
+            self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
-        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-        e_feat2 = self.edge_fc2(feat2)
-        
-        return {'e_f': e_feat, 'e_f2': e_feat2}    
+        if self.multi_attn:
+            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+            e_feat2 = self.edge_fc2(feat2)
+            
+            return {'e_f': e_feat, 'e_f2': e_feat2}   
+        return {'e_f': e_feat}
 
 class O_O_EdgeApplyMoudle(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, multi_attn):
         super(O_O_EdgeApplyMoudle, self).__init__()
+        self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
-        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
+        if multi_attn:
+            self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
     
     def forward(self, edge):
-        # ipdb.set_trace()
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
-        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-        e_feat2 = self.edge_fc2(feat2)
-        
-        return {'e_f': e_feat, 'e_f2': e_feat2}    
+        if self.multi_attn:
+            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+            e_feat2 = self.edge_fc2(feat2)
+            
+            return {'e_f': e_feat, 'e_f2': e_feat2}   
+        return {'e_f': e_feat}  
 
 class H_O_EdgeApplyMoudle(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, multi_attn):
         super(H_O_EdgeApplyMoudle, self).__init__()
+        self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
-        self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
-        # self.attn_fc = MLP(CONFIG.G_A_L_S, CONFIG.G_A_A, CONFIG.G_A_B, CONFIG.G_E_BN, CONFIG.G_A_D)
+        if multi_attn:
+            self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
     
     def forward(self, edge):
-        # ipdb.set_trace()
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
-        # a_feat = self.attn_fc(e_feat)
-        # # alpha = F.softmax(a_feat, dim=1)
-        # return {'e_f': e_feat, 'a_feat': a_feat} 
-        feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-        e_feat2 = self.edge_fc2(feat2)
-        
-        return {'e_f': e_feat, 'e_f2': e_feat2}    
+
+        if self.multi_attn:
+            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+            e_feat2 = self.edge_fc2(feat2)
+            
+            return {'e_f': e_feat, 'e_f2': e_feat2}   
+        return {'e_f': e_feat}    
 
 class H_NodeApplyModule(nn.Module):
     def __init__(self, CONFIG):
@@ -106,28 +113,35 @@ class E_AttentionModule2(nn.Module):
         return {'a_feat2': a_feat2}
 
 class GNN(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, multi_attn=False):
         super(GNN, self).__init__()
-        self.apply_h_h_edge = H_H_EdgeApplyMoudle(CONFIG)
-        self.apply_h_o_edge = H_O_EdgeApplyMoudle(CONFIG)
-        self.apply_o_o_edge = O_O_EdgeApplyMoudle(CONFIG)
+        self.multi_attn = multi_attn
+        self.apply_h_h_edge = H_H_EdgeApplyMoudle(CONFIG, multi_attn)
+        self.apply_h_o_edge = H_O_EdgeApplyMoudle(CONFIG, multi_attn)
+        self.apply_o_o_edge = O_O_EdgeApplyMoudle(CONFIG, multi_attn)
         self.apply_edge_attn1 = E_AttentionModule1(CONFIG)
-        self.apply_edge_attn2 = E_AttentionModule2(CONFIG)
+        if multi_attn:
+            self.apply_edge_attn2 = E_AttentionModule2(CONFIG)  
         self.apply_h_node = H_NodeApplyModule(CONFIG)
         self.apply_o_node = O_NodeApplyModule(CONFIG)
 
     def _message_func(self, edges):
         # ipdb.set_trace()
-        return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
+        if self.multi_attn:
+            return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
+        return {'nei_n_f': edges.src['n_f'],  'a_feat': edges.data['a_feat']}
 
     def _reduce_func(self, nodes):
         # calculate the features of virtual nodes 
         # ipdb.set_trace()
         alpha1 = F.softmax(nodes.mailbox['a_feat'], dim=1)
-        alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
-        alpha = (alpha1+alpha2)/2
-        # z = torch.sum(torch.mul(alpha.repeat(1,1,1024), nodes.mailbox['nei_n_f']), dim=1).squeeze()
-        z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2']], dim=2)
+        if self.multi_attn:
+            alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
+            alpha = (alpha1+alpha2)/2
+            z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2']], dim=2)
+        else:
+            alpha = alpha1
+            z_raw_f = nodes.mailbox['nei_n_f']
         z_f = torch.sum( alpha * z_raw_f, dim=1)
         # when training batch_graph, here will process batch_graph graph by graph, 
         # we cannot return 'alpha' for the different dimension 
@@ -147,7 +161,8 @@ class GNN(nn.Module):
             g.apply_edges(self.apply_h_o_edge, tuple(zip(*h_o_e_list)))
 
         g.apply_edges(self.apply_edge_attn1)
-        g.apply_edges(self.apply_edge_attn2)
+        if self.multi_attn:
+            g.apply_edges(self.apply_edge_attn2)    
 
         g.update_all(self._message_func, self._reduce_func)
 
@@ -156,15 +171,18 @@ class GNN(nn.Module):
         if not len(o_node) == 0:
             g.apply_nodes(self.apply_o_node, o_node)
 
-        if pop_feat:
-            # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
-            g.ndata.pop('n_f')
-            g.ndata.pop('z_f')
-            g.ndata.pop('word2vec')
-            g.edata.pop('s_f')
-            g.edata.pop('e_f')
-            g.edata.pop('a_feat')
+        # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
+        g.ndata.pop('n_f')
+        g.ndata.pop('z_f')
+        g.ndata.pop('word2vec')
+        g.edata.pop('s_f')
+        g.edata.pop('e_f')
+        g.edata.pop('a_feat')
+        if self.multi_attn:
+            g.edata.pop('e_f2')
             g.edata.pop('a_feat2')
+
+        if pop_feat:
             return g.ndata.pop('new_n_f')
         # # ipdb.set_trace()
         # if self.training or validation:
@@ -173,20 +191,16 @@ class GNN(nn.Module):
         #     return g.ndata.pop('pred'), g.ndata.pop('alpha')
 
 class GRNN(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, multi_attn):
         super(GRNN, self).__init__()
-        self.gnn = GNN(CONFIG)
+        self.gnn = GNN(CONFIG,multi_attn)
 
-    def forward(self, batch_graph, node_feat, spatial_feat, word2vec, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
+    def forward(self, batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
         # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
         # ipdb.set_trace()
         global validation 
         validation = valid
 
-        # batch_graph = batch_graph[0]
-        batch_graph.ndata['n_f'] = node_feat
-        batch_graph.ndata['word2vec'] = word2vec
-        batch_graph.edata['s_f'] = spatial_feat
         try:
             if pop_feat:
                 feat = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)

@@ -103,7 +103,7 @@ def collate_fn(batch):
         Default collate_fn(): https://github.com/pytorch/pytorch/blob/1d53d0756668ce641e4f109200d9c65b003d05fa/torch/utils/data/_utils/collate.py#L43
     '''
     batch_data = {}
-    batch_data['global_id'] =[]
+    batch_data['global_id'] = []
     batch_data['img_name'] = []
     batch_data['det_boxes'] = []
     batch_data['roi_labels'] = []

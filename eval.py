@@ -38,7 +38,7 @@ def main(args):
         # set up model and initialize it with uploaded checkpoint
         # model = GRNN(in_feat=in_feat, out_feat=out_feat, hidden_size=hidden_size, action_num=action_num)
         # ipdb.set_trace()
-        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'])
+        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_attn'])
         # ipdb.set_trace()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)

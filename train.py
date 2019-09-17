@@ -19,6 +19,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from PIL import Image, ImageDraw, ImageFont
+import random
 
 import utils.io as io
 from model.model import AGRNN
@@ -46,7 +47,7 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob)
+    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn)
     # load pretrained model
     if args.pretrained:
         print(f"loading pretrained model {args.pretrained}")
@@ -69,6 +70,8 @@ def run_model(args, data_const):
             model_config['lr'] = args.lr
             model_config['bs'] = args.batch_size
             model_config['layers'] = args.layers
+            model_config['multi_attn'] = args.multi_attn
+            model_config['data_argu'] = args.data_argu
             io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
         elif i==1:
             model_config = model.CONFIG2.save_config()
@@ -115,12 +118,55 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), node_labels.to(device)
                 # if idx == 100: break    
                 if phase == 'train':
+
                     model.train()
                     model.zero_grad()
                     outputs = model(node_num, features, spatial_feat, word2vec, roi_labels)
                     loss = criterion(outputs, node_labels.float())
                     loss.backward()
                     optimizer.step()
+
+                    # import ipdb; ipdb.set_trace()
+                    if args.data_argu:
+                        # filter ROIs
+                        keep_inds = list(set(np.where(node_labels.cpu().numpy() == 1)[0]))
+                        original_inds = np.arange(node_num[0])
+                        remain_inds = np.delete(original_inds, keep_inds, axis=0)
+                        random_select_inds = np.array(random.sample(remain_inds.tolist(), int(remain_inds.shape[0]/2)))
+                        choose_inds = sorted(np.hstack((keep_inds,random_select_inds)))
+                        # remove_inds = [x for x in original_inds if x not in choose_inds]
+                        if len(keep_inds)==0 or len(choose_inds)==1:
+                            continue
+                        
+                        # re-construct the data 
+                        try:
+                            spatial_feat_inds = []
+                            for i in choose_inds:
+                                for j in choose_inds:
+                                    if i == j: 
+                                        continue
+                                    if j == 0:
+                                        ind = i * (node_num[0]-1) + j
+                                    else:
+                                        ind = i * (node_num[0]-1) + j - 1
+                                    spatial_feat_inds.append(ind)
+                            node_num = [len(choose_inds)]
+                            features = features[choose_inds,:]
+                            spatial_feat = spatial_feat[spatial_feat_inds,:]
+                            word2vec = word2vec[choose_inds,:]
+                            roi_labels = [roi_labels[0][int(i)] for i in choose_inds]
+                            node_labels = node_labels[choose_inds, :]
+
+                            # training
+                            model.zero_grad()
+                            outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, choose_nodes=None, remove_nodes=None)
+                            loss1 = criterion(outputs, node_labels.float())
+                            loss1.backward()
+                            optimizer.step()
+                        except Exception as e:
+                            import ipdb; ipdb.set_trace()
+                            print(e)
+
                 else:
                     model.eval()
                     # turn off the gradients for validation, save memory and computations
@@ -128,7 +174,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, validation=True)
                         loss = criterion(outputs, node_labels.float())
 
-                    # print result every 1000 iterationa during validation
+                    # print result every 1000 iteration during validation
                     if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
                         # ipdb.set_trace()
                         image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
@@ -170,6 +216,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                             'bn': args.bn, 
                        'dropout': args.drop_prob,
                      'feat_type': args.feat_type,
+                    'multi_head': args.multi_attn,
                     'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
@@ -311,8 +358,10 @@ parser.add_argument('--bn', type=str2bool, default='true',
                     help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')
-parser.add_argument('--clip', type=int, default=4,
-                     help='gradient clipping: 4')
+parser.add_argument('--multi_attn', '--m_a', action="store_true", default=False,
+                     help='use multi attention or not: False')
+parser.add_argument('--data_argu', '--d_a', type=int, default=2,
+                    help='data argument: 2')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
                     help='location of the original dataset')
