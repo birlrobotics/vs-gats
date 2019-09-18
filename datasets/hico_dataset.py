@@ -9,14 +9,19 @@ from datasets.hico_constants import HicoConstants
 from datasets import metadata
 
 import sys
+import random
 
 class HicoDataset(Dataset):
     '''
     Args:
         subset: ['train', 'val', 'train_val', 'test']
     '''
-    def __init__(self, data_const=HicoConstants(), subset='train'):
+    data_sample_count = 0   # record how many times to process data sampling 
+
+    def __init__(self, data_const=HicoConstants(), subset='train', data_aug=True):
         super(HicoDataset, self).__init__()
+        
+        self.data_aug = data_aug
         self.data_const = data_const
         self.subset_ids = self._load_subset_ids(subset)
         self.sub_app_data = self._load_subset_app_data(subset)
@@ -50,7 +55,7 @@ class HicoDataset(Dataset):
             print('Please double check the name of subset!!!')
             sys.exit(1)
 
-    def get_obj_one_hot(self,node_ids):
+    def _get_obj_one_hot(self,node_ids):
         num_cand = len(node_ids)
         obj_one_hot = np.zeros([num_cand,80])
         for i, node_id in enumerate(node_ids):
@@ -58,12 +63,56 @@ class HicoDataset(Dataset):
             obj_one_hot[i,obj_idx] = 1.0
         return obj_one_hot
 
-    def get_word2vec(self,node_ids):
+    def _get_word2vec(self,node_ids):
         word2vec = np.empty((0,300))
         for node_id in node_ids:
             vec = self.word2vec[metadata.coco_classes[node_id]]
             word2vec = np.vstack((word2vec, vec))
         return word2vec
+
+    def _data_sampler(self, data):
+        # import ipdb; ipdb.set_trace()
+        roi_labels = data['roi_labels']
+        node_num = data['node_num']
+        node_labels = data['node_labels']
+        features = data['features']
+        spatial_feat = data['spatial_feat']
+        # node_one_hot = train_data['node_one_hot']
+        word2vec = data['word2vec']
+        keep_inds = list(set(np.where(node_labels == 1)[0]))
+        original_inds = np.arange(node_num)
+        remain_inds = np.delete(original_inds, keep_inds, axis=0)
+        random_select_inds = np.array(random.sample(remain_inds.tolist(), int(remain_inds.shape[0]/2)), dtype=int)
+        choose_inds = sorted(np.hstack((keep_inds,random_select_inds)))
+        # remove_inds = [x for x in original_inds if x not in choose_inds]
+        if len(keep_inds)==0 or len(choose_inds)==1:
+            return data    
+        # re-construct the data 
+        try:
+            spatial_feat_inds = []
+            for i in choose_inds:
+                for j in choose_inds:
+                    if i == j: 
+                        continue
+                    if j == 0:
+                        ind = i * (node_num-1) + j
+                    else:
+                        ind = i * (node_num-1) + j - 1
+                    spatial_feat_inds.append(ind)
+            data['node_num'] = len(choose_inds)
+            data['features'] = features[choose_inds,:]
+            data['spatial_feat'] = spatial_feat[spatial_feat_inds,:]
+            data['word2vec'] = word2vec[choose_inds,:]
+            data['roi_labels'] = [roi_labels[int(i)] for i in choose_inds]
+            data['node_labels'] = node_labels[choose_inds, :]
+        except Exception as e:
+            import ipdb; ipdb.set_trace()
+            print(e)
+        HicoDataset.data_sample_count+=1
+        return data
+    @staticmethod
+    def displaycount():
+        print("total times to process data sampling", HicoDataset.data_sample_count)
 
     # def get_verb_one_hot(self,hoi_ids):
     #     num_cand = len(hoi_ids)
@@ -92,9 +141,13 @@ class HicoDataset(Dataset):
         data['node_labels'] = single_app_data['node_labels'][:]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
-        data['node_one_hot'] = self.get_obj_one_hot(data['roi_labels'])
-        data['word2vec'] = self.get_word2vec(data['roi_labels'])
+        data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
+        data['word2vec'] = self._get_word2vec(data['roi_labels'])
         # import ipdb; ipdb.set_trace()
+        if self.data_aug:
+            thresh = random.random()
+            if thresh > 0.5:
+                data = self._data_sampler(data)
         return data
 
 # for DatasetLoader

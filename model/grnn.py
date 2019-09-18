@@ -174,11 +174,11 @@ class GNN(nn.Module):
         # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
         g.ndata.pop('n_f')
         g.ndata.pop('z_f')
-        g.ndata.pop('word2vec')
-        g.edata.pop('s_f')
         g.edata.pop('e_f')
         g.edata.pop('a_feat')
         if self.multi_attn:
+            g.ndata.pop('word2vec')
+            g.edata.pop('s_f')
             g.edata.pop('e_f2')
             g.edata.pop('a_feat2')
 
@@ -193,13 +193,20 @@ class GNN(nn.Module):
 class GRNN(nn.Module):
     def __init__(self, CONFIG, multi_attn):
         super(GRNN, self).__init__()
+        self.multi_attn = multi_attn
         self.gnn = GNN(CONFIG,multi_attn)
 
-    def forward(self, batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, valid=False, pop_feat=False):
-        # !NOTE: if node_num==1, there is something wrong to forward the attention mechanism
+    def forward(self, batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, valid=False, pop_feat=False):
+        # !NOTE: if node_num==1, there will be something wrong to forward the attention mechanism
         # ipdb.set_trace()
         global validation 
         validation = valid
+
+        # initialize the graph with some datas
+        batch_graph.ndata['n_f'] = feat
+        if self.multi_attn:
+            batch_graph.ndata['word2vec'] = word2vec
+            batch_graph.edata['s_f'] = spatial_feat
 
         try:
             if pop_feat:

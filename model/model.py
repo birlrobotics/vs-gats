@@ -113,17 +113,10 @@ class AGRNN(nn.Module):
         if not self.CONFIG1.feat_type == 'fc7':
             feat = self.graph_head(feat)
 
-        # batch_graph = batch_graph[0]
-        batch_graph.ndata['n_f'] = feat
-        if self.multi_attn:
-            batch_graph.ndata['word2vec'] = word2vec
-            batch_graph.edata['s_f'] = spatial_feat
-
         # pass throuh gcn
-        # ipdb.set_trace()
         # feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
         # feat = self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
-        self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation)
+        self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
         # apply READOUT function to get predictions
         if not len(batch_h_node_list) == 0:
             batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)

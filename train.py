@@ -34,8 +34,8 @@ from datasets.hico_dataset import HicoDataset, collate_fn
 
 def run_model(args, data_const):
     # set up dataset variable
-    train_dataset = HicoDataset(data_const=data_const, subset='train')
-    val_dataset = HicoDataset(data_const=data_const, subset='val')
+    train_dataset = HicoDataset(data_const=data_const, subset='train', data_aug=args.data_aug)
+    val_dataset = HicoDataset(data_const=data_const, subset='val', data_aug=False)
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
     # use default DataLoader() to load the data. 
@@ -55,7 +55,7 @@ def run_model(args, data_const):
         model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
     # # build optimizer && criterion  
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0)
     # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
@@ -71,7 +71,7 @@ def run_model(args, data_const):
             model_config['bs'] = args.batch_size
             model_config['layers'] = args.layers
             model_config['multi_attn'] = args.multi_attn
-            model_config['data_argu'] = args.data_argu
+            model_config['data_aug'] = args.data_aug
             io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
         elif i==1:
             model_config = model.CONFIG2.save_config()
@@ -126,47 +126,6 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     loss.backward()
                     optimizer.step()
 
-                    # import ipdb; ipdb.set_trace()
-                    if args.data_argu:
-                        # filter ROIs
-                        keep_inds = list(set(np.where(node_labels.cpu().numpy() == 1)[0]))
-                        original_inds = np.arange(node_num[0])
-                        remain_inds = np.delete(original_inds, keep_inds, axis=0)
-                        random_select_inds = np.array(random.sample(remain_inds.tolist(), int(remain_inds.shape[0]/2)))
-                        choose_inds = sorted(np.hstack((keep_inds,random_select_inds)))
-                        # remove_inds = [x for x in original_inds if x not in choose_inds]
-                        if len(keep_inds)==0 or len(choose_inds)==1:
-                            continue
-                        
-                        # re-construct the data 
-                        try:
-                            spatial_feat_inds = []
-                            for i in choose_inds:
-                                for j in choose_inds:
-                                    if i == j: 
-                                        continue
-                                    if j == 0:
-                                        ind = i * (node_num[0]-1) + j
-                                    else:
-                                        ind = i * (node_num[0]-1) + j - 1
-                                    spatial_feat_inds.append(ind)
-                            node_num = [len(choose_inds)]
-                            features = features[choose_inds,:]
-                            spatial_feat = spatial_feat[spatial_feat_inds,:]
-                            word2vec = word2vec[choose_inds,:]
-                            roi_labels = [roi_labels[0][int(i)] for i in choose_inds]
-                            node_labels = node_labels[choose_inds, :]
-
-                            # training
-                            model.zero_grad()
-                            outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, choose_nodes=None, remove_nodes=None)
-                            loss1 = criterion(outputs, node_labels.float())
-                            loss1.backward()
-                            optimizer.step()
-                        except Exception as e:
-                            import ipdb; ipdb.set_trace()
-                            print(e)
-
                 else:
                     model.eval()
                     # turn off the gradients for validation, save memory and computations
@@ -195,17 +154,16 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             
             # log trainval datas, and visualize them in the same graph
             if phase == 'train':
-                train_loss = epoch_loss  
+                train_loss = epoch_loss 
+                HicoDataset.displaycount() 
             else:
                 writer.add_scalars('trainval_loss_epoch', {'train': train_loss, 'val': epoch_loss}, epoch)
             # print data
             if (epoch % args.print_every) == 0:
                 end_time = time.time()
-                # print("[{}] Epoch: {}/{} Loss: {} Acc: {} Execution time: {}".format(\
-                #         phase, epoch+1, args.epoch, epoch_loss, epoch_acc, (end_time-start_time)))
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
-
+                        
         # scheduler.step()
         # save model
         if epoch % args.save_every == (args.save_every -1):
@@ -360,7 +318,7 @@ parser.add_argument('--bn', type=str2bool, default='true',
 #                     help='visualize the result or not')
 parser.add_argument('--multi_attn', '--m_a', action="store_true", default=False,
                      help='use multi attention or not: False')
-parser.add_argument('--data_argu', '--d_a', type=int, default=2,
+parser.add_argument('--data_aug', '--d_a', type=int, default=2,
                     help='data argument: 2')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
@@ -400,3 +358,44 @@ if __name__ == "__main__":
     run_model(args, data_const)
 
 
+
+                    # # import ipdb; ipdb.set_trace()
+                    # if args.data_aug:
+                    #     # filter ROIs
+                    #     keep_inds = list(set(np.where(node_labels.cpu().numpy() == 1)[0]))
+                    #     original_inds = np.arange(node_num[0])
+                    #     remain_inds = np.delete(original_inds, keep_inds, axis=0)
+                    #     random_select_inds = np.array(random.sample(remain_inds.tolist(), int(remain_inds.shape[0]/2)))
+                    #     choose_inds = sorted(np.hstack((keep_inds,random_select_inds)))
+                    #     # remove_inds = [x for x in original_inds if x not in choose_inds]
+                    #     if len(keep_inds)==0 or len(choose_inds)==1:
+                    #         continue
+                        
+                    #     # re-construct the data 
+                    #     try:
+                    #         spatial_feat_inds = []
+                    #         for i in choose_inds:
+                    #             for j in choose_inds:
+                    #                 if i == j: 
+                    #                     continue
+                    #                 if j == 0:
+                    #                     ind = i * (node_num[0]-1) + j
+                    #                 else:
+                    #                     ind = i * (node_num[0]-1) + j - 1
+                    #                 spatial_feat_inds.append(ind)
+                    #         node_num = [len(choose_inds)]
+                    #         features = features[choose_inds,:]
+                    #         spatial_feat = spatial_feat[spatial_feat_inds,:]
+                    #         word2vec = word2vec[choose_inds,:]
+                    #         roi_labels = [roi_labels[0][int(i)] for i in choose_inds]
+                    #         node_labels = node_labels[choose_inds, :]
+
+                    #         # training
+                    #         model.zero_grad()
+                    #         outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, choose_nodes=None, remove_nodes=None)
+                    #         loss1 = criterion(outputs, node_labels.float())
+                    #         loss1.backward()
+                    #         optimizer.step()
+                    #     except Exception as e:
+                    #         import ipdb; ipdb.set_trace()
+                    #         print(e)
