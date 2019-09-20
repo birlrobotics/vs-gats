@@ -99,10 +99,10 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             start_time = time.time()
             running_loss = 0.0
             idx = 0
-
+            
+            HicoDataset.data_sample_count=0
             for data in tqdm(dataloader[phase]): 
                 train_data = data
-                # ipdb.set_trace()
                 img_name = train_data['img_name']
                 det_boxes = train_data['det_boxes']
                 roi_labels = train_data['roi_labels']
@@ -300,19 +300,19 @@ def str2bool(arg):
 
 parser = argparse.ArgumentParser(description="separable 3D CNN for action classification!")
 
-parser.add_argument('--batch_size', '--b_s', type=int, default=2,
-                    help='batch size: 2')
-parser.add_argument('--layers', type=int, default=3, required=True,
-                    help='the num of gcn layers: 3') 
-parser.add_argument('--drop_prob', type=float, default=None,
-                    help='dropout parameter: None')
+parser.add_argument('--batch_size', '--b_s', type=int, default=1,
+                    help='batch size: 1')
+parser.add_argument('--layers', type=int, default=1, required=True,
+                    help='the num of gcn layers: 1') 
+parser.add_argument('--drop_prob', type=float, default=0,
+                    help='dropout parameter: 0')
 parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
 parser.add_argument('--bias', type=str2bool, default='true',
                     help="add bias to fc layers or not: True")
-parser.add_argument('--bn', type=str2bool, default='true',
+parser.add_argument('--bn', type=str2bool, default='false',
                     help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')

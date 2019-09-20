@@ -64,7 +64,7 @@ class AGRNN(nn.Module):
                 else:
                     edge_list.append((src, dst))
         # get human nodes && object nodes
-        h_node_list = np.where(roi_label == 1)[0]
+        h_node_list = np.where(roi_label == 1)[0]   # !NOTE: the type of roi_label must be numpy.array
         obj_node_list = np.where(roi_label != 1)[0]
 
         # get h_h edges && h_o edges && o_o edges

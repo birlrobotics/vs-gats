@@ -82,7 +82,8 @@ class HicoDataset(Dataset):
         keep_inds = list(set(np.where(node_labels == 1)[0]))
         original_inds = np.arange(node_num)
         remain_inds = np.delete(original_inds, keep_inds, axis=0)
-        random_select_inds = np.array(random.sample(remain_inds.tolist(), int(remain_inds.shape[0]/2)), dtype=int)
+        random_select_num = 0 if remain_inds.shape[0]==0 else random.choice(np.arange(remain_inds.shape[0]))  #int(remain_inds.shape[0]-1) if int(remain_inds.shape[0]-1)>0 else 0
+        random_select_inds = np.array(random.sample(remain_inds.tolist(), random_select_num), dtype=int) 
         choose_inds = sorted(np.hstack((keep_inds,random_select_inds)))
         # remove_inds = [x for x in original_inds if x not in choose_inds]
         if len(keep_inds)==0 or len(choose_inds)==1:
@@ -103,7 +104,7 @@ class HicoDataset(Dataset):
             data['features'] = features[choose_inds,:]
             data['spatial_feat'] = spatial_feat[spatial_feat_inds,:]
             data['word2vec'] = word2vec[choose_inds,:]
-            data['roi_labels'] = [roi_labels[int(i)] for i in choose_inds]
+            data['roi_labels'] = np.array([roi_labels[int(i)] for i in choose_inds])  # !NOTE, it is important to transfer list to np.array
             data['node_labels'] = node_labels[choose_inds, :]
         except Exception as e:
             import ipdb; ipdb.set_trace()
@@ -112,7 +113,7 @@ class HicoDataset(Dataset):
         return data
     @staticmethod
     def displaycount():
-        print("total times to process data sampling", HicoDataset.data_sample_count)
+        print("total times to process data sampling:", HicoDataset.data_sample_count)
 
     # def get_verb_one_hot(self,hoi_ids):
     #     num_cand = len(hoi_ids)

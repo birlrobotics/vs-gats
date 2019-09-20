@@ -24,7 +24,7 @@ import torch
 matplotlib.use('TKAgg')
 
 # def get_intersection(box1, box2):
-#     # !NOTE:this is a bug  if box1 have no intersetion with box2
+#     # !NOTE:this is a bug if box1 have no intersetion with box2
 #     return np.hstack((np.maximum(box1[:2], box2[:2]), np.minimum(box1[2:], box2[2:])))
 
 # def compute_area(box):
@@ -33,7 +33,7 @@ matplotlib.use('TKAgg')
 def get_node_index(classname, bbox, det_classes, det_boxes, node_num, labeled=True):
     bbox = np.array(bbox, dtype=np.float32)
  
-    max_iou = 0.3  # Use 0.5 as a threshold for evaluation
+    max_iou = 0.5  # Use 0.5 as a threshold for evaluation
     max_iou_index = -1
 
     for i_node in range(node_num):

@@ -50,7 +50,7 @@ class MLP(nn.Module):
             # batch normalization is put before activation function 
             block.add_module(f'A{i}', activate)
 
-            if drop_prob is not None:
+            if drop_prob:
                 block.add_module(f'D{i}', nn.Dropout(drop_prob))
             self.layers.append(block)
     

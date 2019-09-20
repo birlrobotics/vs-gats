@@ -66,7 +66,7 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8):
             return img    
 
         if scores is not None:
-            keep = np.where(scores > score_thresh)
+            keep = np.where(scores > score_thresh)[0]
             bboxs = bboxs[keep]
             labels = labels[keep]
             scores = scores[keep] 
