@@ -282,8 +282,8 @@ def evaluate_boxes(data_const):
 
     io.mkdir_if_not_exists(data_const.result_dir, recursive=True)
     evaluation_stats_json = os.path.join(
-        data_const.result_dir,
-        f'eval_stats_boxes_0.1eval.json')
+        data_const.hico,
+        f'eval_stats_boxes_eval.json')
 
     io.dump_json_object(evaluation_stats,evaluation_stats_json)
     
@@ -382,8 +382,8 @@ def evaluate_boxes_and_labels(data_const):
 
     io.mkdir_if_not_exists(data_const.result_dir, recursive=True)
     evaluation_stats_json = os.path.join(
-        data_const.result_dir,
-        f'eval_stats_boxes_labels_0.1eval.json')
+        data_const.hico,
+        f'eval_stats_boxes_labeled_eval.json')
 
     io.dump_json_object(evaluation_stats,evaluation_stats_json)
 

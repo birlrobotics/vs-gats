@@ -53,7 +53,6 @@ def get_node_index(classname, bbox, det_classes, det_boxes, node_num, labeled=Tr
                 max_iou_index = i_node
     return max_iou_index
 
-
 def parse_data(data_const,args):
 
     assert os.path.exists(data_const.clean_dir), 'Please check the path to annotion file!'
@@ -62,10 +61,13 @@ def parse_data(data_const,args):
     print('Load original data successfully!')
 
     boxes_scores_rpn_ids_labels = h5py.File(data_const.boxes_scores_rpn_ids_labels, 'r')
-    # boxes_fc7_feat = h5py.File(data_const.faster_det_fc7_feat, 'r')
-    boxes_fc7_feat = h5py.File(data_const.faster_det_pool_feat, 'r')
     print('Load selected instance detection data successfully!')
 
+    if args.feat_type == 'fc7':
+        boxes_feat = h5py.File(data_const.faster_det_fc7_feat, 'r')
+    else:
+        boxes_feat = h5py.File(data_const.faster_det_pool_feat, 'r')
+    
     action_class_num = len(metadata.action_classes)
     list_action = anno_data['list_action']
 
@@ -76,9 +78,14 @@ def parse_data(data_const,args):
 
         if not args.vis_result:
             if phase == 'bbox_train':
-                print('Creating hico_trainval_data*.hdf5 file ...')
-                hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool.hdf5')
-                save_data = h5py.File(hdf5_file,'w')
+                if args.feat_type == 'fc7':
+                    print('Creating hico_trainval_data_fc7.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_fc7.hdf5')
+                    save_data = h5py.File(hdf5_file,'w')
+                else:
+                    print('Creating hico_trainval_data_pool.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool.hdf5')
+                    save_data = h5py.File(hdf5_file,'w')
             else:
                 print('Creating hico_test_data.hdf5*...')
                 hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool.hdf5')
@@ -92,12 +99,11 @@ def parse_data(data_const,args):
 
         for i_img in tqdm(img_list):
             # load detection data
-            # i_img = 129
             # ipdb.set_trace()
             img_name = data['filename'][0,i_img][0]
             global_id = img_name.split(".")[0]
             selected_det_data = boxes_scores_rpn_ids_labels[global_id]['boxes_scores_rpn_ids']
-            det_feat = boxes_fc7_feat[global_id]
+            det_feat = boxes_feat[global_id]
 
             if selected_det_data.shape[0] == 0:
                 bad_dets_imgs['0'].append(global_id)
@@ -124,9 +130,10 @@ def parse_data(data_const,args):
             # det_class = np.array(metadata.coco_pytorch_to_coco)[det_class.astype(int)].astype(int)
 
             # calculate the number of nodes
-            human_num = len(np.where(det_class == 1))
-            obj_num = len(det_class) - human_num
-            node_num = human_num + obj_num
+            # human_num = len(np.where(det_class == 1)[0])
+            # obj_num = len(det_class) - human_num
+            # node_num = human_num + obj_num
+            node_num = len(det_class)
 
             # parse the original data to get node labels
             node_labels = np.zeros((node_num, action_class_num))
@@ -181,7 +188,7 @@ def parse_data(data_const,args):
                 plt.title('all_ground_truth')
                 plt.subplot(1,2,2)
                 plt.imshow(np.array(result))
-                plt.title('select_ground_truth')
+                plt.title('selected_ground_truth')
                 # plt.axis('off')
                 plt.ion()
                 plt.pause(10)
@@ -234,12 +241,14 @@ if __name__ == "__main__":
                         help="where the anno_bbox.mat file is")
     parse.add_argument("--save_dir", type=str, default='processed',
                         help="where to save the processed data")
-    parse.add_argument('--vis_result', action="store_true", default=False,
+    parse.add_argument('--vis_result', '--v_r', action="store_true", default=False,
                         help='visualize the result or not')
     parse.add_argument('--frcnn', action="store_true", default=False,
                         help='visualize the result or not')
     parse.add_argument('--labeled', action="store_true", default=False,
                         help='take instance detection label into account when getting node index')
+    parse.add_argument("--feat_type", '--f_t', type=str, default='fc7', choices=['fc7', 'pool'],
+                        help="which feature do you want to parse: fc7")
 
     args = parse.parse_args()
     if args.frcnn:

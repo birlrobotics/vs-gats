@@ -37,7 +37,7 @@ def main(args):
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
         data_const = HicoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
-        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=True)#checkpoint['multi_attn'])
+        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=True) #checkpoint['multi_head'])
         # ipdb.set_trace()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
@@ -68,8 +68,8 @@ def main(args):
         global_id = train_data['global_id'][0]
         img_name = train_data['img_name'][0]
         det_boxes = train_data['det_boxes'][0]
-        roi_labels = train_data['roi_labels'][0]
         roi_scores = train_data['roi_scores'][0]
+        roi_labels = train_data['roi_labels'][0]
         node_num = train_data['node_num']
         # node_labels = train_data['node_labels']
         features = train_data['features'] 
@@ -82,7 +82,7 @@ def main(args):
         # referencing
         # features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
         features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), word2vec.to(device)
-        outputs, atten = model(node_num, features, spatial_feat, word2vec, roi_labels)
+        outputs, atten = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()

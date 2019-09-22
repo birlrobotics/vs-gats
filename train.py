@@ -55,8 +55,10 @@ def run_model(args, data_const):
         model.load_state_dict(checkpoints['state_dict'])
     model.to(device)
     # # build optimizer && criterion  
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)
+    if args.optim == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
@@ -72,6 +74,8 @@ def run_model(args, data_const):
             model_config['layers'] = args.layers
             model_config['multi_attn'] = args.multi_attn
             model_config['data_aug'] = args.data_aug
+            model_config['drop_out'] = args.drop_prob
+            model_config['optimizer'] = args.optim
             io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
         elif i==1:
             model_config = model.CONFIG2.save_config()
@@ -298,7 +302,7 @@ def str2bool(arg):
         # raise argparse.ArgumentTypeError('Boolean value expected!')
         pass
 
-parser = argparse.ArgumentParser(description="separable 3D CNN for action classification!")
+parser = argparse.ArgumentParser(description="HOI DETECTION!")
 
 parser.add_argument('--batch_size', '--b_s', type=int, default=1,
                     help='batch size: 1')
@@ -349,7 +353,10 @@ parser.add_argument('--train_model', '--t_m', type=str, default='epoch', require
                     help='the version of code, will create subdir in log/ && checkpoints/ ')
 
 parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
-                    help='if using graph head, here should be pool: default(fc7) ')
+                    help='if using graph head, here should be \'pool\': default(fc7) ')
+
+parser.add_argument('--optim',  type=str, default='sgd', choices=['sgd', 'adam'],
+                    help='which optimizer to be use: sgd ')
 
 args = parser.parse_args() 
 

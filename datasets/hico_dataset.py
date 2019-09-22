@@ -18,7 +18,7 @@ class HicoDataset(Dataset):
     '''
     data_sample_count = 0   # record how many times to process data sampling 
 
-    def __init__(self, data_const=HicoConstants(), subset='train', data_aug=True):
+    def __init__(self, data_const=HicoConstants(), subset='train', data_aug=False):
         super(HicoDataset, self).__init__()
         
         self.data_aug = data_aug

@@ -12,6 +12,7 @@ class HicoConstants(io.JsonSerializableClass):
             exp_ver ='test'):
         self.clean_dir = clean_dir
         self.proc_dir = proc_dir
+        self.hico = res_dir
         self.result_dir = res_dir + '/' + exp_ver
         self.feat_type = feat_type
 

@@ -44,7 +44,7 @@ class MLP(nn.Module):
             block = nn.Sequential(
                 OrderedDict([(f'L{i}', layer), 
                             ]))
-            if use_bn:
+            if use_bn:                                  # !NOTE:# Actually, it is inappropriate to use batch-normalization here
                 bn = nn.BatchNorm1d(layer_sizes[i+1])
                 block.add_module(f'B{i}', bn)
             # batch normalization is put before activation function 

@@ -8,7 +8,7 @@ class CONFIGURATION(object):
         self.feat_type = feat_type
         self.ACTION_NUM = 117
         # graph head model
-        self.G_H_L_S = [12544, 2048, 2048]   # 
+        self.G_H_L_S = [12544, 2048, 1024]   # 
         self.G_H_A   = ['ReLU', 'ReLU']
         self.G_H_B   = bias
         self.G_H_BN  = bn
@@ -33,7 +33,7 @@ class CONFIGURATION(object):
                     self.G_E_D   = dropout
 
                     # gnn edge function2
-                    self.G_E_L_S2 = [616, 512, 1024]
+                    self.G_E_L_S2 = [616, 1024, 1024]
                     self.G_E_A2   = ['ReLU', 'ReLU']
                     self.G_E_B2   = bias
                     self.G_E_BN2  = bn
@@ -42,40 +42,54 @@ class CONFIGURATION(object):
                     # gnn attention mechanism
                     self.G_A_L_S = [1024, 1]
                     self.G_A_A   = ['LeakyReLU']
-                    self.G_A_B   = bias
-                    self.G_A_BN  = bn
-                    self.G_A_D   = dropout
+                    self.G_A_B   = False #bias
+                    self.G_A_BN  = False #bn
+                    self.G_A_D   = False #dropout
 
                     # gnn attention mechanism2
                     self.G_A_L_S2 = [1024, 1]
-                    self.G_A_A2   = ['ReLU', 'LeakyReLU']
-                    self.G_A_B2   = bias
-                    self.G_A_BN2  = bn
-                    self.G_A_D2   = dropout
+                    self.G_A_A2   = ['LeakyReLU']
+                    self.G_A_B2   = False #bias
+                    self.G_A_BN2  = False #bn
+                    self.G_A_D2   = False #dropout
 
             else:
                 if layer==1:
-                    # gnn node function
-                    self.G_N_L_S = [2048*2, 2048, 1024]
-                    self.G_N_A   = ['ReLU', 'ReLU']
+                    # # gnn node function
+                    self.G_N_L_S = [3072, 1024]
+                    self.G_N_A   = ['ReLU']
                     self.G_N_B   = bias
                     self.G_N_BN  = bn
                     self.G_N_D   = dropout
                     self.G_N_GRU = 1024
 
-                    # gnn edge function
-                    self.G_E_L_S = [2048*2, 512]
+                    # gnn edge function1
+                    self.G_E_L_S = [1024*2, 1024]
                     self.G_E_A   = ['ReLU']
                     self.G_E_B   = bias
                     self.G_E_BN  = bn
                     self.G_E_D   = dropout
 
+                    # gnn edge function2
+                    self.G_E_L_S2 = [616, 1024, 1024]
+                    self.G_E_A2   = ['ReLU', 'ReLU']
+                    self.G_E_B2   = bias
+                    self.G_E_BN2  = bn
+                    self.G_E_D2   = dropout
+
                     # gnn attention mechanism
-                    self.G_A_L_S = [512, 1]
+                    self.G_A_L_S = [1024, 1]
                     self.G_A_A   = ['LeakyReLU']
-                    self.G_A_B   = bias
-                    self.G_A_BN  = bn
-                    self.G_A_D   = dropout
+                    self.G_A_B   = False #bias
+                    self.G_A_BN  = False #bn
+                    self.G_A_D   = False #dropout
+
+                    # gnn attention mechanism2
+                    self.G_A_L_S2 = [1024, 1]
+                    self.G_A_A2   = ['LeakyReLU']
+                    self.G_A_B2   = False #bias
+                    self.G_A_BN2  = False #bn
+                    self.G_A_D2   = False #dropout
 
         else:
             if feat_type=='fc7':
