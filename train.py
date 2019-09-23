@@ -62,7 +62,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -115,11 +115,11 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 node_labels = train_data['node_labels']
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
-                # node_one_hot = train_data['node_one_hot']
-                word2vec = train_data['word2vec']
+                node_one_hot = train_data['node_one_hot']
+                # word2vec = train_data['word2vec']
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
                 # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
-                features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), node_labels.to(device)
+                features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
                 # if idx == 100: break    
                 if phase == 'train':
 
@@ -168,7 +168,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
                         
-        # scheduler.step()
+        scheduler.step()
         # save model
         if epoch % args.save_every == (args.save_every -1):
             checkpoint = { 

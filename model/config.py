@@ -33,7 +33,7 @@ class CONFIGURATION(object):
                     self.G_E_D   = dropout
 
                     # gnn edge function2
-                    self.G_E_L_S2 = [616, 1024, 1024]
+                    self.G_E_L_S2 = [176, 512, 1024]
                     self.G_E_A2   = ['ReLU', 'ReLU']
                     self.G_E_B2   = bias
                     self.G_E_BN2  = bn
@@ -42,16 +42,16 @@ class CONFIGURATION(object):
                     # gnn attention mechanism
                     self.G_A_L_S = [1024, 1]
                     self.G_A_A   = ['LeakyReLU']
-                    self.G_A_B   = False #bias
-                    self.G_A_BN  = False #bn
-                    self.G_A_D   = False #dropout
+                    self.G_A_B   = bias
+                    self.G_A_BN  = bn
+                    self.G_A_D   = dropout
 
                     # gnn attention mechanism2
                     self.G_A_L_S2 = [1024, 1]
                     self.G_A_A2   = ['LeakyReLU']
-                    self.G_A_B2   = False #bias
-                    self.G_A_BN2  = False #bn
-                    self.G_A_D2   = False #dropout
+                    self.G_A_B2   = bias
+                    self.G_A_BN2  = bn
+                    self.G_A_D2   = dropout
 
             else:
                 if layer==1:
@@ -71,7 +71,7 @@ class CONFIGURATION(object):
                     self.G_E_D   = dropout
 
                     # gnn edge function2
-                    self.G_E_L_S2 = [616, 1024, 1024]
+                    self.G_E_L_S2 = [616, 512, 1024]
                     self.G_E_A2   = ['ReLU', 'ReLU']
                     self.G_E_B2   = bias
                     self.G_E_BN2  = bn
@@ -80,16 +80,16 @@ class CONFIGURATION(object):
                     # gnn attention mechanism
                     self.G_A_L_S = [1024, 1]
                     self.G_A_A   = ['LeakyReLU']
-                    self.G_A_B   = False #bias
-                    self.G_A_BN  = False #bn
-                    self.G_A_D   = False #dropout
+                    self.G_A_B   = bias
+                    self.G_A_BN  = bn
+                    self.G_A_D   = dropout
 
                     # gnn attention mechanism2
                     self.G_A_L_S2 = [1024, 1]
                     self.G_A_A2   = ['LeakyReLU']
-                    self.G_A_B2   = False #bias
-                    self.G_A_BN2  = False #bn
-                    self.G_A_D2   = False #dropout
+                    self.G_A_B2   = bias
+                    self.G_A_BN2  = bn
+                    self.G_A_D2   = dropout
 
         else:
             if feat_type=='fc7':

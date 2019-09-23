@@ -77,7 +77,7 @@ class HicoDataset(Dataset):
         node_labels = data['node_labels']
         features = data['features']
         spatial_feat = data['spatial_feat']
-        # node_one_hot = train_data['node_one_hot']
+        node_one_hot = data['node_one_hot']
         word2vec = data['word2vec']
         keep_inds = list(set(np.where(node_labels == 1)[0]))
         original_inds = np.arange(node_num)
@@ -103,6 +103,7 @@ class HicoDataset(Dataset):
             data['node_num'] = len(choose_inds)
             data['features'] = features[choose_inds,:]
             data['spatial_feat'] = spatial_feat[spatial_feat_inds,:]
+            data['node_one_hot'] = node_one_hot[choose_inds,:]
             data['word2vec'] = word2vec[choose_inds,:]
             data['roi_labels'] = np.array([roi_labels[int(i)] for i in choose_inds])  # !NOTE, it is important to transfer list to np.array
             data['node_labels'] = node_labels[choose_inds, :]
@@ -166,7 +167,7 @@ def collate_fn(batch):
     batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
-    # batch_data['node_one_hot'] = []
+    batch_data['node_one_hot'] = []
     batch_data['word2vec'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
@@ -178,14 +179,14 @@ def collate_fn(batch):
         batch_data['node_labels'].append(data['node_labels'])
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
-        # batch_data['node_one_hot'].append(data['node_one_hot'])
+        batch_data['node_one_hot'].append(data['node_one_hot'])
         batch_data['word2vec'].append(data['word2vec'])
 
     # import ipdb; ipdb.set_trace()
     batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
-    # batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
+    batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
     batch_data['word2vec'] = torch.FloatTensor(np.concatenate(batch_data['word2vec'], axis=0))
 
     return batch_data

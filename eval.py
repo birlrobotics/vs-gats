@@ -74,14 +74,14 @@ def main(args):
         # node_labels = train_data['node_labels']
         features = train_data['features'] 
         spatial_feat = train_data['spatial_feat']
-        # node_one_hot = train_data['node_one_hot'] 
-        word2vec = train_data['word2vec']
+        node_one_hot = train_data['node_one_hot'] 
+        # word2vec = train_data['word2vec']
         
         # if node_num ==0 or node_num ==1: continue
 
         # referencing
         # features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
-        features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), word2vec.to(device)
+        features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
         outputs, atten = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
         
         action_score = nn.Sigmoid()(outputs)

@@ -131,8 +131,6 @@ class AGRNN(nn.Module):
 if __name__ == "__main__":
     model = AGRNN()
 
-
-
     # @staticmethod
     # def _build_graph(node_num, roi_label, node_space):
 

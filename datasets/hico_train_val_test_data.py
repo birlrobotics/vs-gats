@@ -87,9 +87,14 @@ def parse_data(data_const,args):
                     hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool.hdf5')
                     save_data = h5py.File(hdf5_file,'w')
             else:
-                print('Creating hico_test_data.hdf5*...')
-                hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool.hdf5')
-                save_data = h5py.File(hdf5_file,'w')
+                if args.feat_type == 'fc7':
+                    print('Creating hico_test_data_fc7.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_fc7.hdf5')
+                    save_data = h5py.File(hdf5_file,'w')
+                else:
+                    print('Creating hico_test_data_pool.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool.hdf5')
+                    save_data = h5py.File(hdf5_file,'w')
 
         data = anno_data[phase]
         if args.vis_result:
