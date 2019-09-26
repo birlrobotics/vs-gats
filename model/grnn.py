@@ -81,14 +81,11 @@ class O_NodeApplyModule(nn.Module):
     def __init__(self, CONFIG):
         super(O_NodeApplyModule, self).__init__()
         self.node_fc = MLP(CONFIG.G_N_L_S, CONFIG.G_N_A, CONFIG.G_N_B, CONFIG.G_N_BN, CONFIG.G_N_D)
-        # self.gru = nn.GRU(CONFIG.G_N_L_S[-1], CONFIG.G_N_GRU)
-        # self.predictor = Predictor(CONFIG.G_N_GRU, CONFIG.ACTION_NUM)
     
     def forward(self, node):
         feat = torch.cat([node.data['n_f'], node.data['z_f']], dim=1)
         n_feat = self.node_fc(feat)
-        # pred = self.predictor(n_feat)
-        # return {'pred': pred}
+
         return {'new_n_f': n_feat}
 
 class E_AttentionModule1(nn.Module):
@@ -166,6 +163,7 @@ class GNN(nn.Module):
 
         g.update_all(self._message_func, self._reduce_func)
 
+        # import ipdb; ipdb.set_trace()
         if not len(h_node) == 0:
             g.apply_nodes(self.apply_h_node, h_node)
         if not len(o_node) == 0:
@@ -213,7 +211,7 @@ class GRNN(nn.Module):
                 feat = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)
                 return feat
             else:
-                self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)
+                self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
             # if self.training or validation:
             #     output = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
             #     return output

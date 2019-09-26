@@ -47,7 +47,7 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn)
+    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers)
     # load pretrained model
     if args.pretrained:
         print(f"loading pretrained model {args.pretrained}")
@@ -62,7 +62,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -168,15 +168,16 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
                         
-        scheduler.step()
+        # scheduler.step()
         # save model
-        if epoch % args.save_every == (args.save_every -1):
+        if epoch % args.save_every == (args.save_every - 1):
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,
                           'bias': args.bias, 
                             'bn': args.bn, 
                        'dropout': args.drop_prob,
+                        'layers': args.layers,
                      'feat_type': args.feat_type,
                     'multi_head': args.multi_attn,
                     'state_dict': model.state_dict()
@@ -304,25 +305,25 @@ def str2bool(arg):
 
 parser = argparse.ArgumentParser(description="HOI DETECTION!")
 
-parser.add_argument('--batch_size', '--b_s', type=int, default=1,
+parser.add_argument('--batch_size', '--b_s', type=int, default=1,required=True,
                     help='batch size: 1')
 parser.add_argument('--layers', type=int, default=1, required=True,
                     help='the num of gcn layers: 1') 
-parser.add_argument('--drop_prob', type=float, default=0,
+parser.add_argument('--drop_prob', type=float, default=0, required=True,
                     help='dropout parameter: 0')
-parser.add_argument('--lr', type=float, default=0.001,
+parser.add_argument('--lr', type=float, default=0.001, required=True,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
-parser.add_argument('--bias', type=str2bool, default='true',
+parser.add_argument('--bias', type=str2bool, default='true', required=True,
                     help="add bias to fc layers or not: True")
-parser.add_argument('--bn', type=str2bool, default='false',
+parser.add_argument('--bn', type=str2bool, default='false', 
                     help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')
-parser.add_argument('--multi_attn', '--m_a', action="store_true", default=False,
+parser.add_argument('--multi_attn', '--m_a', action="store_true", default=False,required=True,
                      help='use multi attention or not: False')
-parser.add_argument('--data_aug', '--d_a', type=int, default=2,
+parser.add_argument('--data_aug', '--d_a', type=int, default=2, required=True,
                     help='data argument: 2')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
@@ -355,7 +356,7 @@ parser.add_argument('--train_model', '--t_m', type=str, default='epoch', require
 parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
                     help='if using graph head, here should be \'pool\': default(fc7) ')
 
-parser.add_argument('--optim',  type=str, default='sgd', choices=['sgd', 'adam'],
+parser.add_argument('--optim',  type=str, default='sgd', choices=['sgd', 'adam'], required=True,
                     help='which optimizer to be use: sgd ')
 
 args = parser.parse_args() 

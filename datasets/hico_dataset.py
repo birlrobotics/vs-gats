@@ -112,6 +112,7 @@ class HicoDataset(Dataset):
             print(e)
         HicoDataset.data_sample_count+=1
         return data
+        
     @staticmethod
     def displaycount():
         print("total times to process data sampling:", HicoDataset.data_sample_count)

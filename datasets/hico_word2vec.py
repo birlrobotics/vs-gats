@@ -9,7 +9,7 @@ from tqdm import tqdm
 model = gensim.models.KeyedVectors.load_word2vec_format('/home/birl/ml_dl_projects/bigjun/word2vec/GoogleNews-vectors-negative300.bin', binary=True)  
 
 data_const = HicoConstants()
-hico_word2vec =  os.path.join(data_const.proc_dir,'hico_word2vec.hdf5')
+hico_word2vec = os.path.join(data_const.proc_dir,'hico_word2vec.hdf5')
 file = h5py.File(hico_word2vec, 'w')
 original_keys = list(model.vocab.keys())
 upper_keys = [str.upper(x) for x in original_keys]

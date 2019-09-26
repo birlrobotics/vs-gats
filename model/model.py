@@ -24,11 +24,12 @@ class Predictor(nn.Module):
         return {'pred': pred}
 
 class AGRNN(nn.Module):
-    def __init__(self, feat_type='fc7', bias=True, bn=True, dropout=None, multi_attn=False):
+    def __init__(self, feat_type='fc7', bias=True, bn=True, dropout=None, multi_attn=False, layer=1):
         super(AGRNN, self).__init__()
         # self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         # self.extractor = S3D_G(initial_temporal_size=32, in_channel=3, gate=True)
         self.multi_attn = multi_attn
+        self.layer = layer
         self.CONFIG1 = CONFIGURATION(feat_type=feat_type, layer=1, bias=bias, bn=bn, dropout=dropout, multi_attn=multi_attn)
         self.CONFIG2 = CONFIGURATION(feat_type=feat_type, layer=2, bias=bias, bn=bn, dropout=dropout, multi_attn=multi_attn)
         self.CONFIG3 = CONFIGURATION(feat_type=feat_type, layer=3, bias=bias, bn=bn, dropout=dropout, multi_attn=multi_attn)
@@ -37,8 +38,11 @@ class AGRNN(nn.Module):
             self.graph_head = TowMLPHead(self.CONFIG1.G_H_L_S, self.CONFIG1.G_H_A, self.CONFIG1.G_H_B, self.CONFIG1.G_H_BN, self.CONFIG1.G_H_D)
 
         self.grnn1 = GRNN(self.CONFIG1, multi_attn=multi_attn)
-        # self.grnn2 = GRNN(self.CONFIG2)
-        # self.grnn3 = GRNN(self.CONFIG3)
+        if layer==2:
+            self.grnn2 = GRNN(self.CONFIG2, multi_attn=False)
+        if layer==3:
+            self.grnn2 = GRNN(self.CONFIG2, multi_attn=False)
+            self.grnn3 = GRNN(self.CONFIG3, multi_attn=False)
 
         self.h_node_readout = Predictor(self.CONFIG1.G_N_L_S[-1], self.CONFIG1.ACTION_NUM)
         self.o_node_readout = Predictor(self.CONFIG1.G_N_L_S[-1], self.CONFIG1.ACTION_NUM)
@@ -113,10 +117,19 @@ class AGRNN(nn.Module):
         if not self.CONFIG1.feat_type == 'fc7':
             feat = self.graph_head(feat)
 
-        # pass throuh gcn
-        # feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
-        # feat = self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, validation, pop_feat=True)
-        self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+        # pass throuh gnn/gcn
+        if self.layer==1:
+            self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+        
+        elif self.layer==2:
+            feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
+            self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+        
+        else:
+            feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
+            feat = self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
+            self.grnn3(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+
         # apply READOUT function to get predictions
         if not len(batch_h_node_list) == 0:
             batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)

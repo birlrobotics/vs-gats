@@ -37,7 +37,7 @@ def main(args):
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
         data_const = HicoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
-        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=True) #checkpoint['multi_head'])
+        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers']) #2 )
         # ipdb.set_trace()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
