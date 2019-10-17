@@ -13,16 +13,18 @@ class H_H_EdgeApplyMoudle(nn.Module):
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         if multi_attn:
             self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
+            self.edge_fc3 = MLP(CONFIG.G_E_L_S3, CONFIG.G_E_A3, CONFIG.G_E_B3, CONFIG.G_E_BN3, CONFIG.G_E_D3)
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
         if self.multi_attn:
-            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-            e_feat2 = self.edge_fc2(feat2)
+            e_feat2 = self.edge_fc2(edge.data['s_f'])
+            feat3 = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
+            e_feat3 = self.edge_fc3(feat3)
             
-            return {'e_f': e_feat, 'e_f2': e_feat2}   
+            return {'e_f': e_feat, 'e_f2': e_feat2, 'e_f3': e_feat3}   
         return {'e_f': e_feat}
 
 class O_O_EdgeApplyMoudle(nn.Module):
@@ -32,16 +34,18 @@ class O_O_EdgeApplyMoudle(nn.Module):
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         if multi_attn:
             self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
+            self.edge_fc3 = MLP(CONFIG.G_E_L_S3, CONFIG.G_E_A3, CONFIG.G_E_B3, CONFIG.G_E_BN3, CONFIG.G_E_D3)
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
         if self.multi_attn:
-            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-            e_feat2 = self.edge_fc2(feat2)
+            e_feat2 = self.edge_fc2(edge.data['s_f'])
+            feat3 = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
+            e_feat3 = self.edge_fc3(feat3)
             
-            return {'e_f': e_feat, 'e_f2': e_feat2}   
+            return {'e_f': e_feat, 'e_f2': e_feat2, 'e_f3': e_feat3}   
         return {'e_f': e_feat}  
 
 class H_O_EdgeApplyMoudle(nn.Module):
@@ -51,16 +55,18 @@ class H_O_EdgeApplyMoudle(nn.Module):
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         if multi_attn:
             self.edge_fc2 = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
+            self.edge_fc3 = MLP(CONFIG.G_E_L_S3, CONFIG.G_E_A3, CONFIG.G_E_B3, CONFIG.G_E_BN3, CONFIG.G_E_D3)
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.dst['n_f']], dim=1)
         e_feat = self.edge_fc(feat)
 
         if self.multi_attn:
-            feat2 = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-            e_feat2 = self.edge_fc2(feat2)
+            e_feat2 = self.edge_fc2(edge.data['s_f'])
+            feat3 = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
+            e_feat3 = self.edge_fc3(feat3)
             
-            return {'e_f': e_feat, 'e_f2': e_feat2}   
+            return {'e_f': e_feat, 'e_f2': e_feat2, 'e_f3': e_feat3}    
         return {'e_f': e_feat}    
 
 class H_NodeApplyModule(nn.Module):
@@ -109,6 +115,18 @@ class E_AttentionModule2(nn.Module):
 
         return {'a_feat2': a_feat2}
 
+class E_AttentionModule3(nn.Module):
+    def __init__(self, CONFIG):
+        super(E_AttentionModule3, self).__init__()
+        self.attn_fc3 = MLP(CONFIG.G_A_L_S3, CONFIG.G_A_A3, CONFIG.G_A_B3, CONFIG.G_A_BN3, CONFIG.G_A_D3)
+
+    def forward(self, edge):
+        # feat = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+        # a_feat2 = self.attn_fc2(feat)
+        a_feat3 = self.attn_fc3(edge.data['e_f3'])
+
+        return {'a_feat3': a_feat3}
+
 class GNN(nn.Module):
     def __init__(self, CONFIG, multi_attn=False):
         super(GNN, self).__init__()
@@ -119,13 +137,14 @@ class GNN(nn.Module):
         self.apply_edge_attn1 = E_AttentionModule1(CONFIG)
         if multi_attn:
             self.apply_edge_attn2 = E_AttentionModule2(CONFIG)  
+            self.apply_edge_attn3 = E_AttentionModule3(CONFIG)
         self.apply_h_node = H_NodeApplyModule(CONFIG)
         self.apply_o_node = O_NodeApplyModule(CONFIG)
 
     def _message_func(self, edges):
         # ipdb.set_trace()
         if self.multi_attn:
-            return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
+            return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'e_f3': edges.data['e_f3'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2'], 'a_feat3': edges.data['a_feat3']}
         return {'nei_n_f': edges.src['n_f'],  'a_feat': edges.data['a_feat']}
 
     def _reduce_func(self, nodes):
@@ -134,8 +153,9 @@ class GNN(nn.Module):
         alpha1 = F.softmax(nodes.mailbox['a_feat'], dim=1)
         if self.multi_attn:
             alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
-            alpha = (alpha1+alpha2)/2
-            z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2']], dim=2)
+            alpha3 = F.softmax(nodes.mailbox['a_feat3'], dim=1)
+            alpha = (alpha1+alpha2+alpha3)/2
+            z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2'], nodes.mailbox['e_f3']], dim=2)
         else:
             alpha = alpha1
             z_raw_f = nodes.mailbox['nei_n_f']
@@ -159,7 +179,8 @@ class GNN(nn.Module):
 
         g.apply_edges(self.apply_edge_attn1)
         if self.multi_attn:
-            g.apply_edges(self.apply_edge_attn2)    
+            g.apply_edges(self.apply_edge_attn2)   
+            g.apply_edges(self.apply_edge_attn3) 
 
         g.update_all(self._message_func, self._reduce_func)
 

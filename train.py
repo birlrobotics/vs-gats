@@ -115,11 +115,11 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 node_labels = train_data['node_labels']
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
-                node_one_hot = train_data['node_one_hot']
-                # word2vec = train_data['word2vec']
+                # node_one_hot = train_data['node_one_hot']
+                word2vec = train_data['word2vec']
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
                 # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
-                features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
+                features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), node_labels.to(device)
                 # if idx == 100: break    
                 if phase == 'train':
 

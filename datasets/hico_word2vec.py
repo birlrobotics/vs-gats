@@ -9,8 +9,6 @@ from tqdm import tqdm
 model = gensim.models.KeyedVectors.load_word2vec_format('/home/birl/ml_dl_projects/bigjun/word2vec/GoogleNews-vectors-negative300.bin', binary=True)  
 
 data_const = HicoConstants()
-hico_word2vec = os.path.join(data_const.proc_dir,'hico_word2vec.hdf5')
-file = h5py.File(hico_word2vec, 'w')
 original_keys = list(model.vocab.keys())
 upper_keys = [str.upper(x) for x in original_keys]
 
@@ -19,7 +17,8 @@ upper_keys = [str.upper(x) for x in original_keys]
 #     word_list.write(list(original_keys)[i]+'\n')
 # word_list.close()
 # import ipdb; ipdb.set_trace()
-
+hico_word2vec = os.path.join(data_const.proc_dir,'hico_word2vec.hdf5')
+file = h5py.File(hico_word2vec, 'w')
 for name in coco_classes:
     # if str.upper(name) not in upper_keys:
     #     print(name)
