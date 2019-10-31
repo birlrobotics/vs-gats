@@ -141,7 +141,9 @@ class HicoDataset(Dataset):
         data['roi_labels'] = single_app_data['classes'][:]
         data['roi_scores'] = single_app_data['scores'][:]
         data['node_num'] = single_app_data['node_num'].value
-        data['node_labels'] = single_app_data['node_labels'][:]
+        # data['node_labels'] = single_app_data['node_labels'][:]
+        data['edge_labels'] = single_app_data['edge_labels'][:]
+        data['edge_num'] = data['edge_labels'].shape[0]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
         data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
@@ -165,7 +167,9 @@ def collate_fn(batch):
     batch_data['roi_labels'] = []
     batch_data['roi_scores'] = []
     batch_data['node_num'] = []
-    batch_data['node_labels'] = []
+    batch_data['edge_labels'] = []
+    batch_data['edge_num'] = []
+    # batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
     batch_data['node_one_hot'] = []
@@ -177,14 +181,17 @@ def collate_fn(batch):
         batch_data['roi_labels'].append(data['roi_labels'])
         batch_data['roi_scores'].append(data['roi_scores'])
         batch_data['node_num'].append(data['node_num'])
-        batch_data['node_labels'].append(data['node_labels'])
+        # batch_data['node_labels'].append(data['node_labels'])
+        batch_data['edge_labels'].append(data['edge_labels'])
+        batch_data['edge_num'].append(data['edge_num'])
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
         batch_data['node_one_hot'].append(data['node_one_hot'])
         batch_data['word2vec'].append(data['word2vec'])
 
     # import ipdb; ipdb.set_trace()
-    batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
+    # batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
+    batch_data['edge_labels'] = torch.FloatTensor(np.concatenate(batch_data['edge_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
     batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))

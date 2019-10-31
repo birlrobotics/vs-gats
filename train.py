@@ -112,21 +112,23 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 roi_labels = train_data['roi_labels']
                 roi_scores = train_data['roi_scores']
                 node_num = train_data['node_num']
-                node_labels = train_data['node_labels']
+                edge_labels = train_data['edge_labels']
+                edge_num = train_data['edge_num']
+                # import ipdb; ipdb.set_trace()
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
                 # node_one_hot = train_data['node_one_hot']
                 word2vec = train_data['word2vec']
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
                 # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
-                features, spatial_feat, word2vec, node_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), node_labels.to(device)
-                # if idx == 100: break    
+                features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
+                # if idx == 10: break    
                 if phase == 'train':
 
                     model.train()
                     model.zero_grad()
                     outputs = model(node_num, features, spatial_feat, word2vec, roi_labels)
-                    loss = criterion(outputs, node_labels.float())
+                    loss = criterion(outputs, edge_labels.float())
                     loss.backward()
                     optimizer.step()
 
@@ -135,24 +137,25 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     # turn off the gradients for validation, save memory and computations
                     with torch.no_grad():
                         outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, validation=True)
-                        loss = criterion(outputs, node_labels.float())
+                        loss = criterion(outputs, edge_labels.float())
 
                     # print result every 1000 iteration during validation
                     if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
                         # ipdb.set_trace()
                         image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
                         image_temp = image.copy()
-                        raw_outputs = nn.Sigmoid()(outputs[0:int(node_num[0])])
+                        raw_outputs = nn.Sigmoid()(outputs[0:int(edge_num[0])])
                         raw_outputs = raw_outputs.cpu().detach().numpy()
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], node_labels[0:int(node_num[0])].cpu().numpy(), score_thresh=0.7)
+                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], edge_labels[0:int(edge_num[0])].cpu().numpy(), score_thresh=0.7)
                         action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.7)
                         writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
+                        writer.add_text('img_name', img_name[0], epoch)
 
                 idx+=1
                 # accumulate loss of each batch
-                running_loss += loss.item() * node_labels.shape[0]
+                running_loss += loss.item() * edge_labels.shape[0]
             # calculate the loss and accuracy of each epoch
             epoch_loss = running_loss / len(dataset[phase])
             
@@ -188,106 +191,6 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
     writer.close()
     print('Finishing training!')
 
-def iteration_train(model, dataloader, dataset, criterion, optimizer, scheduler, device, data_const):
-    print('iteration training...')
-
-    # # set visualization and create folder to save checkpoints
-    writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'iteration_train')
-    io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'iteration_train'), recursive=True)
-    iter=0
-    for epoch in range(args.epoch):
-        start_time = time.time()
-        running_loss = 0.0
-        for data in tqdm(dataloader['train']): 
-            train_data = data
-            img_name = train_data['img_name']
-            det_boxes = train_data['det_boxes']
-            roi_labels = train_data['roi_labels']
-            roi_scores = train_data['roi_scores']
-            node_num = train_data['node_num']
-            node_labels = train_data['node_labels']
-            features = train_data['features']   
-            features, node_labels = features.to(device), node_labels.to(device)
-            # training
-            model.train()
-            model.zero_grad()
-            outputs = model(node_num, features, roi_labels)
-            loss = criterion(outputs, node_labels.float())
-            loss.backward()
-            optimizer.step()
-            # loss.backward()
-            # if step%exp_const.imgs_per_batch==0:
-            #     optimizer.step()
-            #     optimizer.zero_grad()
-            # accumulate loss of each batch
-            running_loss += loss.item() * node_labels.shape[0]
-            if iter % 99 == 0:
-                loss = running_loss/(iter+1)
-                writer.add_scalar('train_loss_iter', loss, iter)
-
-            if iter % 4999 == 0:
-                num_samples = 2500
-                val_loss = 0
-                idx = 0
-                for data in tqdm(dataloader['val']):
-                    train_data = data
-                    img_name = train_data['img_name']
-                    det_boxes = train_data['det_boxes']
-                    roi_labels = train_data['roi_labels']
-                    roi_scores = train_data['roi_scores']
-                    node_num = train_data['node_num']
-                    node_labels = train_data['node_labels']
-                    features = train_data['features']   
-        
-                    features, node_labels = features.to(device), node_labels.to(device)
-                    # training
-                    model.eval()
-                    model.zero_grad()
-                    outputs = model(node_num, features, roi_labels, validation=True)
-                    loss = criterion(outputs, node_labels.float())
-                    val_loss += loss.item() * node_labels.shape[0]
-
-                    if idx==0 or idx%1000 == 999:
-                        image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
-                        image_temp = image.copy()
-                        raw_outputs = nn.Sigmoid()(outputs[0:int(node_num[0])])
-                        raw_outputs = raw_outputs.cpu().detach().numpy()
-                        # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], node_labels[0:int(node_num[0])].cpu().numpy())
-                        action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs)
-                        writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
-                        writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
-                    idx+=1
-                loss = val_loss / len(dataset['val'])
-                writer.add_scalar('val_loss_iter', loss, iter)
-                
-                # save model
-                checkpoint = { 
-                            'lr': args.lr,
-                           'b_s': args.batch_size,
-                          'bias': args.bias, 
-                            'bn': args.bn, 
-                       'dropout': args.drop_prob,
-                     'feat_type': args.feat_type,
-                    'state_dict': model.state_dict()
-                }
-                save_name = "checkpoint_" + str(iter+1) + '_iters.pth'
-                torch.save(checkpoint, os.path.join(args.save_dir, args.exp_ver, 'iteration_train', save_name))
-
-            iter+=1
-
-        epoch_loss = running_loss / len(dataset['train'])
-        if (epoch % args.print_every) == 0:
-            end_time = time.time()
-            # print("[{}] Epoch: {}/{} Loss: {} Acc: {} Execution time: {}".format(\
-            #         phase, epoch+1, args.epoch, epoch_loss, epoch_acc, (end_time-start_time)))
-            print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
-                    'train', epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
-
-    writer.close()
-    print('Finishing training!')
-
-
 
 ###########################################################################################
 #                                 SET SOME ARGUMENTS                                      #
@@ -321,9 +224,9 @@ parser.add_argument('--bn', type=str2bool, default='false',
                     help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')
-parser.add_argument('--multi_attn', '--m_a', action="store_true", default=False,required=True,
+parser.add_argument('--multi_attn', '--m_a', type=str2bool, default='true', required=True,
                      help='use multi attention or not: False')
-parser.add_argument('--data_aug', '--d_a', type=int, default=2, required=True,
+parser.add_argument('--data_aug', '--d_a', type=str2bool, default='true', required=True,
                     help='data argument: 2')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',

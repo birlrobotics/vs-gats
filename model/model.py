@@ -9,16 +9,33 @@ from model.graph_head import TowMLPHead, ResBlockHead
 from model.s3d_g import S3D_G
 from model.grnn import GRNN
 from model.config import CONFIGURATION
+from model.utils import MLP
 import ipdb
 
-class Predictor(nn.Module):
-    def __init__(self, in_feat, num_calss):
-        super(Predictor, self).__init__()
-        self.classifier = nn.Linear(in_feat, num_calss)
-        self.sigmoid = nn.Sigmoid()
+class NodeUpdate(nn.Module):
+    def __init__(self, CONFIG):
+        super(NodeUpdate, self).__init__()
+        self.fc = MLP(CONFIG.G_N_L_S_U, CONFIG.G_N_A_U, CONFIG.G_N_B_U, CONFIG.G_N_BN_U, CONFIG.G_N_D_U)
+        self.fc_lang = MLP(CONFIG.G_N_L_S2_U, CONFIG.G_N_A2_U, CONFIG.G_N_B2_U, CONFIG.G_N_BN2_U, CONFIG.G_N_D2_U)
 
     def forward(self, node):
-        pred = self.classifier(node.data['new_n_f'])
+        feat = torch.cat([node.data['n_f_original'], node.data['new_n_f']], dim=1)
+        feat_lang = torch.cat([node.data['word2vec_original'], node.data['new_n_f_lang']], dim=1)
+        n_feat = self.fc(feat)
+        n_feat_lang = self.fc_lang(feat_lang)
+
+        return {'new_n_f': n_feat, 'new_n_f_lang': n_feat_lang}
+
+class Predictor(nn.Module):
+    def __init__(self, CONFIG):
+        super(Predictor, self).__init__()
+        self.classifier = MLP(CONFIG.G_ER_L_S, CONFIG.G_ER_A, CONFIG.G_ER_B, CONFIG.G_ER_BN, CONFIG.G_ER_D)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, edge):
+
+        feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f']], dim=1)
+        pred = self.classifier(feat)
         # if the criterion is BCELoss, you need to uncomment the following code
         # output = self.sigmoid(output)
         return {'pred': pred}
@@ -39,24 +56,24 @@ class AGRNN(nn.Module):
 
         self.grnn1 = GRNN(self.CONFIG1, multi_attn=multi_attn)
         if layer==2:
-            self.grnn2 = GRNN(self.CONFIG2, multi_attn=False)
+            self.grnn2 = GRNN(self.CONFIG1, multi_attn=False)
         if layer==3:
-            self.grnn2 = GRNN(self.CONFIG2, multi_attn=False)
-            self.grnn3 = GRNN(self.CONFIG3, multi_attn=False)
+            self.grnn2 = GRNN(self.CONFIG1, multi_attn=False)
+            self.grnn3 = GRNN(self.CONFIG1, multi_attn=False)
 
-        self.h_node_readout = Predictor(self.CONFIG1.G_N_L_S[-1], self.CONFIG1.ACTION_NUM)
-        self.o_node_readout = Predictor(self.CONFIG1.G_N_L_S[-1], self.CONFIG1.ACTION_NUM)
+        self.node_update = NodeUpdate(self.CONFIG1)
+        self.edge_readout = Predictor(self.CONFIG1)
 
     def _build_graph(self, node_num, roi_label, node_space):
 
         graph = dgl.DGLGraph()
         graph.add_nodes(node_num)
 
-        edge_list, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list = self._collect_edge(node_num, roi_label, node_space)
+        edge_list, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list, readout_h_h_e_list, readout_h_o_e_list = self._collect_edge(node_num, roi_label, node_space)
         src, dst = tuple(zip(*edge_list))
         graph.add_edges(src, dst)   # make the graph bi-directional
 
-        return graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list
+        return graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list, readout_h_h_e_list, readout_h_o_e_list
 
     def _collect_edge(self, node_num, roi_label, node_space):
         # get all edge in the fully-connected graph
@@ -84,6 +101,29 @@ class AGRNN(nn.Module):
                 o_o_e_list.append((src, dst))
         h_o_e_list = [x for x in edge_list if x not in h_h_e_list+o_o_e_list]
 
+        # get corresponding readout edge in the graph
+        readout_edge_list = []
+        src_box_list = np.arange(roi_label.shape[0])
+        for dst in h_node_list:
+            if dst == roi_label.shape[0]-1:
+                continue
+            src_box_list = src_box_list[1:]
+            for src in src_box_list:
+                readout_edge_list.append((src, dst))
+
+        # get h_h edges && h_o edges
+        readout_h_h_e_list = []
+        temp_h_node_list = h_node_list[:]
+        for dst in h_node_list:
+            if dst == h_node_list.shape[0]-1:
+                continue
+            temp_h_node_list = temp_h_node_list[1:]
+            for src in temp_h_node_list:
+                if src == dst: continue
+                readout_h_h_e_list.append((src, dst))
+
+        readout_h_o_e_list = [x for x in readout_edge_list if x not in readout_h_h_e_list]
+
         # ipdb.set_trace()
         # add node space to match the batch graph
         h_node_list = (np.array(h_node_list)+node_space).tolist()
@@ -92,18 +132,21 @@ class AGRNN(nn.Module):
         o_o_e_list = (np.array(o_o_e_list)+node_space).tolist()
         h_o_e_list = (np.array(h_o_e_list)+node_space).tolist()
 
-        return edge_list, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list
+        readout_h_h_e_list = (np.array(readout_h_h_e_list)+node_space).tolist()
+        readout_h_o_e_list = (np.array(readout_h_o_e_list)+node_space).tolist()   
+
+        return edge_list, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list, readout_h_h_e_list, readout_h_o_e_list
 
     def forward(self, node_num=None, feat=None, spatial_feat=None, word2vec=None, roi_label=None, validation=False, choose_nodes=None, remove_nodes=None):
         # set up graph
-        batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list= [], [], [], [], [], []
+        batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, batch_readout_h_h_e_list, batch_readout_h_o_e_list = [], [], [], [], [], [], [], []
         node_num_cum = np.cumsum(node_num) # !IMPORTANT
         for i in range(len(node_num)):
             # set node space
             node_space = 0
             if i != 0:
                 node_space = node_num_cum[i-1]
-            graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list = self._build_graph(node_num[i], roi_label[i], node_space)
+            graph, h_node_list, obj_node_list, h_h_e_list, o_o_e_list, h_o_e_list, readout_h_h_e_list, readout_h_o_e_list = self._build_graph(node_num[i], roi_label[i], node_space)
             # updata batch graph
             batch_graph.append(graph)
             batch_h_node_list += h_node_list
@@ -111,6 +154,8 @@ class AGRNN(nn.Module):
             batch_h_h_e_list += h_h_e_list
             batch_o_o_e_list += o_o_e_list
             batch_h_o_e_list += h_o_e_list
+            batch_readout_h_h_e_list += readout_h_h_e_list
+            batch_readout_h_o_e_list += readout_h_o_e_list
         batch_graph = dgl.batch(batch_graph)
 
         # ipdb.set_trace()
@@ -119,27 +164,39 @@ class AGRNN(nn.Module):
 
         # pass throuh gnn/gcn
         if self.layer==1:
-            self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+            self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, initial_feat=True)
         
         elif self.layer==2:
-            feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
-            self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+            feat, feat_lang = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True, initial_feat=True)
+            self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, feat_lang, validation)
         
         else:
-            feat = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
-            feat = self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True)
-            self.grnn3(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation)
+            feat, feat_lang = self.grnn1(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, validation, pop_feat=True, initial_feat=True)
+            feat, feat_lang = self.grnn2(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, feat_lang, validation, pop_feat=True)
+            self.grnn3(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, feat_lang, validation)
 
-        # apply READOUT function to get predictions
-        if not len(batch_h_node_list) == 0:
-            batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)
-        if not len(batch_obj_node_list) == 0:
-            batch_graph.apply_nodes(self.o_node_readout, batch_obj_node_list)
+        # update node feature at the last layer 
+        # if not len(batch_h_node_list) == 0:
+        #     batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)
+        # if not len(batch_obj_node_list) == 0:
+        #     batch_graph.apply_nodes(self.o_node_readout, batch_obj_node_list)
+        batch_graph.apply_nodes(self.node_update, batch_h_node_list+batch_obj_node_list)
 
+        # apply edge READOUT function to get predictions
+        # if not len(batch_readout_h_h_e_list) == 0:
+        #     batch_graph.apply_edges(self.h_h_edge_readout, tuple(zip(*batch_readout_h_h_e_list)))
+        # if not len(batch_readout_h_o_e_list) == 0:
+        #     batch_graph.apply_edges(self.h_o_edge_readout, tuple(zip(*batch_readout_h_o_e_list)))
+
+        batch_graph.apply_edges(self.edge_readout, tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list))))
+
+        # import ipdb; ipdb.set_trace()
         if self.training or validation:
-            return batch_graph.ndata.pop('pred')
+            return batch_graph.edges[tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list)))].data['pred']
         else:
-            return batch_graph.ndata.pop('pred'), batch_graph.ndata.pop('alpha')
+            return batch_graph.edges[tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list)))].data['pred'], \
+                   batch_graph.edges[tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list)))].data['alpha'], \
+                   batch_graph.edges[tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list)))].data['alpha_lang'] 
 
 if __name__ == "__main__":
     model = AGRNN()
