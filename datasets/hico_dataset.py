@@ -18,22 +18,26 @@ class HicoDataset(Dataset):
     '''
     data_sample_count = 0   # record how many times to process data sampling 
 
-    def __init__(self, data_const=HicoConstants(), subset='train', data_aug=False):
+    def __init__(self, data_const=HicoConstants(), subset='train', data_aug=False, sampler=None):
         super(HicoDataset, self).__init__()
         
         self.data_aug = data_aug
         self.data_const = data_const
-        self.subset_ids = self._load_subset_ids(subset)
+        self.subset_ids = self._load_subset_ids(subset, sampler)
         self.sub_app_data = self._load_subset_app_data(subset)
         self.sub_spatial_data = self._load_subset_spatial_data(subset)
         self.word2vec = h5py.File(self.data_const.word2vec, 'r')
 
-    def _load_subset_ids(self, subset):
+    def _load_subset_ids(self, subset, sampler):
         global_ids = io.load_json_object(self.data_const.split_ids_json)
         bad_det_ids = io.load_json_object(self.data_const.bad_faster_rcnn_det_ids)
         # skip bad instance detection image with 0-1 det
         # !NOTE: How to reduce the number of bad instance detection images
         subset_ids = [id for id in global_ids[subset] if id not in bad_det_ids['0']+bad_det_ids["1"]]
+        if sampler:
+            # import ipdb; ipdb.set_trace()
+            ''' when changing the model, use sub-dataset to quickly show if there is something wrong '''
+            subset_ids = random.sample(subset_ids, int(len(subset_ids)*sampler))
         return subset_ids
 
     def _load_subset_app_data(self, subset):

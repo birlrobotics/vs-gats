@@ -34,8 +34,8 @@ from datasets.hico_dataset import HicoDataset, collate_fn
 
 def run_model(args, data_const):
     # set up dataset variable
-    train_dataset = HicoDataset(data_const=data_const, subset='train', data_aug=args.data_aug)
-    val_dataset = HicoDataset(data_const=data_const, subset='val', data_aug=False)
+    train_dataset = HicoDataset(data_const=data_const, subset='train', data_aug=args.data_aug, sampler=args.sampler)
+    val_dataset = HicoDataset(data_const=data_const, subset='val', data_aug=False, sampler=args.sampler)
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
     # use default DataLoader() to load the data. 
@@ -47,7 +47,7 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers)
+    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
     # load pretrained model
     if args.pretrained:
         print(f"loading pretrained model {args.pretrained}")
@@ -76,6 +76,7 @@ def run_model(args, data_const):
             model_config['data_aug'] = args.data_aug
             model_config['drop_out'] = args.drop_prob
             model_config['optimizer'] = args.optim
+            model_config['diff_edge'] = args.diff_edge
             io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
         elif i==1:
             model_config = model.CONFIG2.save_config()
@@ -114,21 +115,21 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 node_num = train_data['node_num']
                 edge_labels = train_data['edge_labels']
                 edge_num = train_data['edge_num']
-                # import ipdb; ipdb.set_trace()
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
                 # node_one_hot = train_data['node_one_hot']
                 word2vec = train_data['word2vec']
                 # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
                 # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
+                # spatial_feat = torch.nn.functional.normalize(spatial_feat,p=2,dim=1)
                 features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
                 # if idx == 10: break    
                 if phase == 'train':
-
                     model.train()
                     model.zero_grad()
                     outputs = model(node_num, features, spatial_feat, word2vec, roi_labels)
                     loss = criterion(outputs, edge_labels.float())
+                    # import ipdb; ipdb.set_trace()
                     loss.backward()
                     optimizer.step()
 
@@ -138,7 +139,6 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     with torch.no_grad():
                         outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, validation=True)
                         loss = criterion(outputs, edge_labels.float())
-
                     # print result every 1000 iteration during validation
                     if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
                         # ipdb.set_trace()
@@ -183,6 +183,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         'layers': args.layers,
                      'feat_type': args.feat_type,
                     'multi_head': args.multi_attn,
+                     'diff_edge': args.diff_edge,
                     'state_dict': model.state_dict()
             }
             save_name = "checkpoint_" + str(epoch+1) + '_epoch.pth'
@@ -261,6 +262,12 @@ parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=Tr
 
 parser.add_argument('--optim',  type=str, default='sgd', choices=['sgd', 'adam'], required=True,
                     help='which optimizer to be use: sgd ')
+
+parser.add_argument('--diff_edge',  type=str2bool, default='true', required=True,
+                    help='h_h edge, h_o edge, o_o edge are different with each other')
+
+parser.add_argument('--sampler',  type=float, default=0, 
+                    help='h_h edge, h_o edge, o_o edge are different with each other')
 
 args = parser.parse_args() 
 

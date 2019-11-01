@@ -37,7 +37,7 @@ def main(args):
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
         data_const = HicoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
-        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers']) #2 )
+        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers'], diff_edge=checkpoint['diff_edge']) #2 )
         # ipdb.set_trace()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
@@ -74,33 +74,34 @@ def main(args):
         # node_labels = train_data['node_labels']
         features = train_data['features'] 
         spatial_feat = train_data['spatial_feat']
-        node_one_hot = train_data['node_one_hot'] 
-        # word2vec = train_data['word2vec']
+        # node_one_hot = train_data['node_one_hot'] 
+        word2vec = train_data['word2vec']
         
         # if node_num ==0 or node_num ==1: continue
 
         # referencing
         # features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
-        features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
-        outputs, atten = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
+        features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), word2vec.to(device)
+        outputs, attn, attn_lang = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()
-        atten = atten.cpu().detach().numpy()
+        attn = attn.cpu().detach().numpy()
+        attn_lang = attn_lang.cpu().detach().numpy()
         # import ipdb; ipdb.set_trace()
         # save detection result
         # hoi_box_score[file_name.split('.')[0]] = {}
         pred_hois.create_group(global_id)
         det_data_dict = {}
         h_idxs = np.where(roi_labels == 1)[0]
+        labeled_edge_list = np.cumsum(node_num - np.arange(len(h_idxs)) - 1)
+        labeled_edge_list[-1] = 0
         for h_idx in h_idxs:
             for i_idx in range(len(roi_labels)):
-                if i_idx == h_idx:
+                if i_idx <= h_idx:
                     continue
-                if h_idx > i_idx:
-                    score = roi_scores[h_idx] * roi_scores[i_idx] * (action_score[h_idx] + action_score[i_idx]) * atten[h_idx][i_idx]
-                else:
-                    score = roi_scores[h_idx] * roi_scores[i_idx] * (action_score[h_idx] + action_score[i_idx]) * atten[h_idx][i_idx-1]
+                edge_idx = labeled_edge_list[h_idx-1] + (i_idx-h_idx-1)
+                score = roi_scores[h_idx] * roi_scores[i_idx] * action_score[edge_idx]
                 try:
                     hoi_ids = metadata.obj_hoi_index[roi_labels[i_idx]]
                 except Exception as e:
@@ -113,8 +114,7 @@ def main(args):
                         det_data_dict[str(hoi_idx+1).zfill(3)] = np.vstack((det_data_dict[str(hoi_idx+1).zfill(3)], hoi_pair_score[None,:]))
         for k, v in det_data_dict.items():
             pred_hois[global_id].create_dataset(k, data=v)
-    # io.dump_json_object(hoi_box_score, os.path.join(result_path, 'pred_hoi_dets.json'))
-    # pickle.dump(hoi_box_score, open(os.path.join(result_path, 'pred_hoi_dets.p'), 'wb'))
+            
     pred_hois.close()
 
 def str2bool(arg):

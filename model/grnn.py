@@ -6,9 +6,9 @@ import numpy as np
 from model.utils import MLP, Predictor
 import ipdb
 
-class H_H_EdgeApplyMoudle(nn.Module):
+class H_H_EdgeApplyModule(nn.Module):
     def __init__(self, CONFIG, multi_attn=False):
-        super(H_H_EdgeApplyMoudle, self).__init__()
+        super(H_H_EdgeApplyModule, self).__init__()
         self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         self.edge_fc_lang = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
@@ -21,9 +21,9 @@ class H_H_EdgeApplyMoudle(nn.Module):
   
         return {'e_f': e_feat, 'e_f_lang': e_feat_lang}
 
-class O_O_EdgeApplyMoudle(nn.Module):
+class O_O_EdgeApplyModule(nn.Module):
     def __init__(self, CONFIG, multi_attn=False):
-        super(O_O_EdgeApplyMoudle, self).__init__()
+        super(O_O_EdgeApplyModule, self).__init__()
         self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         self.edge_fc_lang = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
@@ -36,9 +36,9 @@ class O_O_EdgeApplyMoudle(nn.Module):
   
         return {'e_f': e_feat, 'e_f_lang': e_feat_lang}
 
-class H_O_EdgeApplyMoudle(nn.Module):
+class H_O_EdgeApplyModule(nn.Module):
     def __init__(self, CONFIG, multi_attn=False):
-        super(H_O_EdgeApplyMoudle, self).__init__()
+        super(H_O_EdgeApplyModule, self).__init__()
         self.multi_attn = multi_attn
         self.edge_fc = MLP(CONFIG.G_E_L_S, CONFIG.G_E_A, CONFIG.G_E_B, CONFIG.G_E_BN, CONFIG.G_E_D)
         self.edge_fc_lang = MLP(CONFIG.G_E_L_S2, CONFIG.G_E_A2, CONFIG.G_E_B2, CONFIG.G_E_BN2, CONFIG.G_E_D2)
@@ -104,17 +104,18 @@ class E_AttentionModule2(nn.Module):
         return {'a_feat2': a_feat2}
 
 class GNN(nn.Module):
-    def __init__(self, CONFIG, multi_attn=False):
+    def __init__(self, CONFIG, multi_attn=False, diff_edge=True):
         super(GNN, self).__init__()
+
         self.multi_attn = multi_attn
-        self.apply_h_h_edge = H_H_EdgeApplyMoudle(CONFIG, multi_attn)
-        self.apply_h_o_edge = H_O_EdgeApplyMoudle(CONFIG, multi_attn)
-        self.apply_o_o_edge = O_O_EdgeApplyMoudle(CONFIG, multi_attn)
-        self.apply_edge_attn1 = E_AttentionModule1(CONFIG)
-        if multi_attn:
-            self.apply_edge_attn2 = E_AttentionModule2(CONFIG)  
+        self.diff_edge = diff_edge
+        self.apply_h_h_edge = H_H_EdgeApplyModule(CONFIG, multi_attn)
+        self.apply_edge_attn1 = E_AttentionModule1(CONFIG)  
         self.apply_h_node = H_NodeApplyModule(CONFIG)
-        self.apply_o_node = O_NodeApplyModule(CONFIG)
+        if diff_edge:
+            self.apply_h_o_edge = H_O_EdgeApplyModule(CONFIG, multi_attn)
+            self.apply_o_o_edge = O_O_EdgeApplyModule(CONFIG, multi_attn)
+            self.apply_o_node = O_NodeApplyModule(CONFIG)
 
     def _message_func(self, edges):
         # ipdb.set_trace()
@@ -150,25 +151,32 @@ class GNN(nn.Module):
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list, pop_feat=False):
         
-        if not len(h_h_e_list) == 0:
-            g.apply_edges(self.apply_h_h_edge, tuple(zip(*h_h_e_list)))
-        # ipdb.set_trace()
-        if not len(o_o_e_list) == 0:
-            g.apply_edges(self.apply_o_o_edge, tuple(zip(*o_o_e_list)))
-        if not len(h_o_e_list) == 0:
-            g.apply_edges(self.apply_h_o_edge, tuple(zip(*h_o_e_list)))
+        if self.diff_edge:
+            if not len(h_h_e_list) == 0:
+                g.apply_edges(self.apply_h_h_edge, tuple(zip(*h_h_e_list)))
+            # ipdb.set_trace()
+            if not len(o_o_e_list) == 0:
+                g.apply_edges(self.apply_o_o_edge, tuple(zip(*o_o_e_list)))
+            if not len(h_o_e_list) == 0:
+                g.apply_edges(self.apply_h_o_edge, tuple(zip(*h_o_e_list)))
 
-        g.apply_edges(self.apply_edge_attn1)
-        if self.multi_attn:
-            g.apply_edges(self.apply_edge_attn2)   
+            g.apply_edges(self.apply_edge_attn1)
+            if self.multi_attn:
+                g.apply_edges(self.apply_edge_attn2)   
 
-        g.update_all(self._message_func, self._reduce_func)
+            g.update_all(self._message_func, self._reduce_func)
 
-        # import ipdb; ipdb.set_trace()
-        if not len(h_node) == 0:
-            g.apply_nodes(self.apply_h_node, h_node)
-        if not len(o_node) == 0:
-            g.apply_nodes(self.apply_o_node, o_node)
+            # import ipdb; ipdb.set_trace()
+            if not len(h_node) == 0:
+                g.apply_nodes(self.apply_h_node, h_node)
+            if not len(o_node) == 0:
+                g.apply_nodes(self.apply_o_node, o_node)
+        else:
+            # g.apply_edges(self.apply_h_h_edge, tuple(zip(*(h_h_e_list+h_o_e_list+o_o_e_list))))
+            g.apply_edges(self.apply_h_h_edge, g.edges())
+            g.apply_edges(self.apply_edge_attn1)
+            g.update_all(self._message_func, self._reduce_func)
+            g.apply_nodes(self.apply_h_node, h_node+o_node)
 
         # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
         g.ndata.pop('n_f')
@@ -188,20 +196,14 @@ class GNN(nn.Module):
         #     g.edata.pop('s_f')
         #     g.edata.pop('e_f2')
         #     g.edata.pop('a_feat2')
-
         if pop_feat:
             return g.ndata.pop('new_n_f'), g.ndata.pop('new_n_f_lang')
-        # # ipdb.set_trace()
-        # if self.training or validation:
-        #     return g.ndata.pop('pred')
-        # else:
-        #     return g.ndata.pop('pred'), g.ndata.pop('alpha')
 
 class GRNN(nn.Module):
-    def __init__(self, CONFIG, multi_attn=False):
+    def __init__(self, CONFIG, multi_attn=False, diff_edge=True):
         super(GRNN, self).__init__()
         self.multi_attn = multi_attn
-        self.gnn = GNN(CONFIG,multi_attn)
+        self.gnn = GNN(CONFIG, multi_attn, diff_edge)
 
     def forward(self, batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, feat, spatial_feat, word2vec, valid=False, pop_feat=False, initial_feat=False):
         # !NOTE: if node_num==1, there will be something wrong to forward the attention mechanism
@@ -219,8 +221,8 @@ class GRNN(nn.Module):
 
         try:
             if pop_feat:
-                feat = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)
-                return feat
+                feat, feat_lang = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list, pop_feat=pop_feat)
+                return feat, feat_lang
             else:
                 self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
             # if self.training or validation:
