@@ -49,7 +49,7 @@ class HicoConstants(io.JsonSerializableClass):
 
         # select proper boxes from rpn
         self.background_score_thresh = 0.4
-        self.human_score_thresh = 0.7
+        self.human_score_thresh = 0.8
         self.object_score_thresh = 0.3
         self.max_num_background = 10
         self.max_num_human = 10
@@ -61,6 +61,7 @@ class HicoConstants(io.JsonSerializableClass):
 
         # train_val_test data
         self.bad_faster_rcnn_det_ids = os.path.join('result', 'bad_faster_rcnn_det_imgs.json')
+        
         if self.feat_type == 'fc7':
             self.hico_trainval_data = os.path.join(self.proc_dir, 'hico_trainval_data_fc7_edge.hdf5')
             self.hico_test_data = os.path.join(self.proc_dir, 'hico_test_data_fc7_edge.hdf5')

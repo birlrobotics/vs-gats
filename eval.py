@@ -88,7 +88,6 @@ def main(args):
         action_score = action_score.cpu().detach().numpy()
         attn = attn.cpu().detach().numpy()
         attn_lang = attn_lang.cpu().detach().numpy()
-        # import ipdb; ipdb.set_trace()
         # save detection result
         # hoi_box_score[file_name.split('.')[0]] = {}
         pred_hois.create_group(global_id)
@@ -100,7 +99,9 @@ def main(args):
             for i_idx in range(len(roi_labels)):
                 if i_idx <= h_idx:
                     continue
+                # import ipdb; ipdb.set_trace()
                 edge_idx = labeled_edge_list[h_idx-1] + (i_idx-h_idx-1)
+                # score = roi_scores[h_idx] * roi_scores[i_idx] * action_score[edge_idx] * (attn[h_idx][i_idx-1]+attn_lang[h_idx][i_idx-1])
                 score = roi_scores[h_idx] * roi_scores[i_idx] * action_score[edge_idx]
                 try:
                     hoi_ids = metadata.obj_hoi_index[roi_labels[i_idx]]
@@ -114,7 +115,7 @@ def main(args):
                         det_data_dict[str(hoi_idx+1).zfill(3)] = np.vstack((det_data_dict[str(hoi_idx+1).zfill(3)], hoi_pair_score[None,:]))
         for k, v in det_data_dict.items():
             pred_hois[global_id].create_dataset(k, data=v)
-            
+
     pred_hois.close()
 
 def str2bool(arg):

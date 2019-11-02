@@ -225,8 +225,8 @@ class AGRNN(nn.Module):
             return batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['pred']
         else:
             return batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['pred'], \
-                   batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['alpha'], \
-                   batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['alpha_lang'] 
+                   batch_graph.nodes[batch_h_node_list].data['alpha'], \
+                   batch_graph.nodes[batch_h_node_list].data['alpha_lang'] 
 
 if __name__ == "__main__":
     model = AGRNN()
