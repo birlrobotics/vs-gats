@@ -6,7 +6,7 @@ class HicoConstants(io.JsonSerializableClass):
     def __init__(
             self,
             clean_dir=os.path.join(os.getcwd(),'datasets/hico'),
-            proc_dir=os.path.join(os.getcwd(),'datasets/processed/hico'),
+            proc_dir=os.path.join(os.getcwd(),'datasets/processed'),
             res_dir=os.path.join(os.getcwd(),'result/hico'),
             feat_type='fc7',
             exp_ver ='test'):

@@ -15,7 +15,8 @@ class H_H_EdgeApplyModule(nn.Module):
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.data['s_f'], edge.dst['n_f']], dim=1)
-        feat_lang = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+        # feat_lang = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+        feat_lang = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
         e_feat = self.edge_fc(feat)
         e_feat_lang = self.edge_fc_lang(feat_lang)
   
@@ -45,7 +46,8 @@ class H_O_EdgeApplyModule(nn.Module):
     
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.data['s_f'], edge.dst['n_f']], dim=1)
-        feat_lang = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+        # feat_lang = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
+        feat_lang = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
         e_feat = self.edge_fc(feat)
         e_feat_lang = self.edge_fc_lang(feat_lang)
   
@@ -136,18 +138,28 @@ class GNN(nn.Module):
         #     alpha = alpha1
         #     z_raw_f = nodes.mailbox['nei_n_f']
         #    # z_raw_f = nodes.mailbox['e_f']
-        z_raw_f = nodes.mailbox['nei_n_f']
+        # z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f']], dim=2)
         # z_raw_f = nodes.mailbox['e_f']
+        # ipdb.set_trace()
+        z_raw_f = nodes.mailbox['nei_n_f']+nodes.mailbox['e_f']
+        # z_raw_f = nodes.mailbox['nei_n_f']
         z_f = torch.sum( alpha * z_raw_f, dim=1)
 
+        # z_raw_f_sp = nodes.mailbox['e_f']
+        # z_f_sp = torch.sum( alpha * z_raw_f_sp, dim=1)
+        # z_raw_f_lang = torch.cat([nodes.mailbox['nei_n_w'],nodes.mailbox['e_f_lang']], dim=2)
+        # z_raw_f_lang = nodes.mailbox['e_f_lang']
+
         z_raw_f_lang = nodes.mailbox['nei_n_w']
-        z_f_lang = torch.sum( alpha_lang * z_raw_f_lang, dim=1)
+        z_f_lang = torch.sum(alpha_lang * z_raw_f_lang, dim=1)
         # when training batch_graph, here will process batch_graph graph by graph, 
         # we cannot return 'alpha' for the different dimension 
         if self.training or validation:
             return {'z_f': z_f, 'z_f_lang': z_f_lang}
+            # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp}
         else:
             return {'z_f': z_f, 'z_f_lang': z_f_lang, 'alpha': alpha, 'alpha_lang': alpha_lang}
+            # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp, 'alpha': alpha, 'alpha_lang': alpha_lang}
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list, pop_feat=False):
         

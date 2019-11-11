@@ -23,7 +23,7 @@ import utils.io as io
 
 def main(args):
     # use GPU if available else revert to CPU
-    device = torch.device('cuda:0' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print("Testing on", device)
 
     # Load checkpoint and set up model

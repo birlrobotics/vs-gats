@@ -44,7 +44,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
@@ -100,6 +100,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
 
     for epoch in range(args.start_epoch, args.epoch):
         # each epoch has a training and validation step
+        epoch_loss = 0
         for phase in ['train', 'val']:
             start_time = time.time()
             running_loss = 0.0
@@ -158,7 +159,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 running_loss += loss.item() * edge_labels.shape[0]
             # calculate the loss and accuracy of each epoch
             epoch_loss = running_loss / len(dataset[phase])
-            
+            # import ipdb; ipdb.set_trace()
             # log trainval datas, and visualize them in the same graph
             if phase == 'train':
                 train_loss = epoch_loss 
@@ -173,7 +174,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch % args.save_every == (args.save_every - 1):
+        if epoch_loss<0.0407 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,

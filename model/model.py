@@ -34,6 +34,7 @@ class Predictor(nn.Module):
 
     def forward(self, edge):
         feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f']], dim=1)
+        # feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.dst['z_f_sp'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f'], edge.src['z_f_sp']], dim=1)
         pred = self.classifier(feat)
         # if the criterion is BCELoss, you need to uncomment the following code
         # output = self.sigmoid(output)
