@@ -44,7 +44,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
@@ -62,7 +62,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=250, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -98,6 +98,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
     writer = SummaryWriter(log_dir=args.log_dir + '/' + args.exp_ver + '/' + 'epoch_train')
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver, 'epoch_train'), recursive=True)
 
+    scheduler_count = 0
     for epoch in range(args.start_epoch, args.epoch):
         # each epoch has a training and validation step
         epoch_loss = 0
@@ -171,8 +172,10 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 end_time = time.time()
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
-                        
-        # scheduler.step()
+        
+        if scheduler_count ==0 and epoch_loss<0.0407 and epoch>=200:
+            scheduler.step()
+            scheduler_count+=1
         # save model
         if epoch_loss<0.0407 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
             checkpoint = { 

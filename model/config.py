@@ -30,7 +30,7 @@ class CONFIGURATION(object):
 
                     # # gnn node function
                     # self.G_N_L_S = [1024+1024+1024, 1024]
-                    self.G_N_L_S = [1024+1024, 1024]
+                    self.G_N_L_S = [1324+1324, 1324]
                     self.G_N_A   = ['ReLU']
                     self.G_N_B   = bias
                     self.G_N_BN  = bn
@@ -47,8 +47,24 @@ class CONFIGURATION(object):
                     self.G_N_D2   = dropout
                     # self.G_N_GRU2 = 1024
 
+                    # # # gnn node function with initial features
+                    # self.G_N_L_S_U = [1024+1024, 1024]
+                    # self.G_N_A_U   = ['ReLU']
+                    # self.G_N_B_U   = bias
+                    # self.G_N_BN_U  = bn
+                    # self.G_N_D_U   = dropout
+                    # # self.G_N_GRU_U = 1024
+
+                    # # # gnn node function for language with initial features
+                    # self.G_N_L_S2_U = [300+300, 300]
+                    # self.G_N_A2_U   = ['ReLU']
+                    # self.G_N_B2_U   = bias
+                    # self.G_N_BN2_U  = bn
+                    # self.G_N_D2_U   = dropout
+                    # # self.G_N_GRU2_U = 1024
+
                     # gnn edge function1
-                    self.G_E_L_S = [1024*2+16, 1024]
+                    self.G_E_L_S = [1024*2+16+300*2, 1324]
                     self.G_E_A   = ['ReLU']
                     self.G_E_B   = bias
                     self.G_E_BN  = bn
@@ -63,12 +79,11 @@ class CONFIGURATION(object):
                     self.G_E_D2   = dropout
 
                     # gnn attention mechanism
-                    self.G_A_L_S = [1024, 1]
+                    self.G_A_L_S = [1324, 1]
                     self.G_A_A   = ['LeakyReLU']
                     self.G_A_B   = bias
                     self.G_A_BN  = bn
                     self.G_A_D   = dropout
-
 
                     # gnn attention mechanism2 for language
                     self.G_A_L_S2 = [1024, 1]
@@ -76,28 +91,6 @@ class CONFIGURATION(object):
                     self.G_A_B2   = bias
                     self.G_A_BN2  = bn
                     self.G_A_D2   = dropout
-
-                    # combine
-                    # self.G_N_L_S = [1024+1024+1024, 1024]
-                    self.G_N_L_S_C = [1324+1324, 1324]
-                    self.G_N_A_C   = ['ReLU']
-                    self.G_N_B_C   = bias
-                    self.G_N_BN_C  = bn
-                    self.G_N_D_C   = dropout
-
-                    # gnn edge function1
-                    self.G_E_L_S_C = [1324*2+16, 1324]
-                    self.G_E_A_C   = ['ReLU']
-                    self.G_E_B_C   = bias
-                    self.G_E_BN_C  = bn
-                    self.G_E_D_C   = dropout
-
-                    # gnn attention mechanism2 for language
-                    self.G_A_L_S_C = [1324, 1]
-                    self.G_A_A_C   = ['LeakyReLU']
-                    self.G_A_B_C   = bias
-                    self.G_A_BN_C  = bn
-                    self.G_A_D_C   = dropout
 
             else:
                 if layer==1:
