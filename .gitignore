@@ -1,8 +1,12 @@
 test_img
 checkpoints
 log
-__pycache__/
+old_log
+inference_imgs
+__pycache__
+.vscode
 
 
 *.pyc
 *.mp4
+

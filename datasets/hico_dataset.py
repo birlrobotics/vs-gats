@@ -74,6 +74,16 @@ class HicoDataset(Dataset):
             word2vec = np.vstack((word2vec, vec))
         return word2vec
 
+    def _get_interactive_label(self, edge_label):
+         
+        interactive_label = np.zeros(edge_label.shape[0])  
+        interactive_label = interactive_label[:, None]
+        valid_idxs = list(set(np.where(edge_label==1)[0]))
+        if len(valid_idxs) > 0:
+            # import ipdb; ipdb.set_trace()
+            interactive_label[valid_idxs,:] = 1
+        return interactive_label
+
     def _data_sampler(self, data):
         # import ipdb; ipdb.set_trace()
         roi_labels = data['roi_labels']
@@ -152,6 +162,7 @@ class HicoDataset(Dataset):
         data['spatial_feat'] = single_spatial_data[:]
         data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
         data['word2vec'] = self._get_word2vec(data['roi_labels'])
+        data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
         # import ipdb; ipdb.set_trace()
         if self.data_aug:
             thresh = random.random()
@@ -159,6 +170,27 @@ class HicoDataset(Dataset):
                 data = self._data_sampler(data)
         return data
 
+    # for inference
+    def sample_date(self, global_id):
+        data = {}
+        single_app_data = self.sub_app_data[global_id]
+        single_spatial_data = self.sub_spatial_data[global_id]
+        data['global_id'] = global_id
+        data['img_name'] = global_id + '.jpg'
+        data['det_boxes'] = single_app_data['boxes'][:]
+        data['roi_labels'] = single_app_data['classes'][:]
+        data['roi_scores'] = single_app_data['scores'][:]
+        data['node_num'] = single_app_data['node_num'].value
+        # data['node_labels'] = single_app_data['node_labels'][:]
+        data['edge_labels'] = single_app_data['edge_labels'][:]
+        data['edge_num'] = data['edge_labels'].shape[0]
+        data['features'] = single_app_data['feature'][:]
+        data['spatial_feat'] = single_spatial_data[:]
+        data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
+        data['word2vec'] = self._get_word2vec(data['roi_labels'])
+        data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
+
+        return data
 # for DatasetLoader
 def collate_fn(batch):
     '''
@@ -178,6 +210,7 @@ def collate_fn(batch):
     batch_data['spatial_feat'] = []
     batch_data['node_one_hot'] = []
     batch_data['word2vec'] = []
+    batch_data['interactive_label'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
         batch_data['img_name'].append(data['img_name'])
@@ -192,6 +225,7 @@ def collate_fn(batch):
         batch_data['spatial_feat'].append(data['spatial_feat'])
         batch_data['node_one_hot'].append(data['node_one_hot'])
         batch_data['word2vec'].append(data['word2vec'])
+        batch_data['interactive_label'].append(data['interactive_label'])
 
     # import ipdb; ipdb.set_trace()
     # batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
@@ -200,5 +234,6 @@ def collate_fn(batch):
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
     batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
     batch_data['word2vec'] = torch.FloatTensor(np.concatenate(batch_data['word2vec'], axis=0))
+    batch_data['interactive_label'] = torch.FloatTensor(np.concatenate(batch_data['interactive_label'], axis=0))
 
     return batch_data

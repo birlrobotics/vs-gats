@@ -8,7 +8,7 @@ from datasets.hico_constants import HicoConstants
 from utils.bbox_utils import compute_area
 from datasets.metadata import coco_classes
 
-def select_det_ids(boxes,scores,nms_keep_ids,score_thresh,max_dets):
+def select_det_ids(boxes,scores,nms_keep_ids,score_thresh,max_dets, required=False):
     if nms_keep_ids is None:
         nms_keep_ids = np.arange(0,scores.shape[0])
     
@@ -26,12 +26,15 @@ def select_det_ids(boxes,scores,nms_keep_ids,score_thresh,max_dets):
         
     # If no dets satisfy previous criterion select the highest ranking one with area > 1
     if len(nms_ids)==0:
+        if required:
+            nms_ids.append(np.argmax(nms_scores))
         # for i in range(nms_keep_ids.shape[0]):
         #     area = compute_area(nms_boxes[i],invalid=-1)
         #     if area > 1:
         #         nms_ids = [i]
         #         break
-        return []
+        else:
+            return []
     # Convert nms ids to box ids
     nms_ids = np.array(nms_ids,dtype=np.int32)
     try:
@@ -58,13 +61,15 @@ def select_dets(
         cls_scores = scores[:, cls_ind]
         cls_nms_keep_ids = np.array(nms_keep_indices[cls_ind])
 
+        # guarantee at least have one person detection
         if cls_name=='person':
             select_ids = select_det_ids(
                 cls_boxes,
                 cls_scores,
                 cls_nms_keep_ids,
                 data_const.human_score_thresh,
-                data_const.max_num_human)
+                data_const.max_num_human,
+                required=True)
                 
         elif cls_name=='__background__':
             select_ids = select_det_ids(
@@ -80,9 +85,12 @@ def select_dets(
                 cls_nms_keep_ids,
                 data_const.object_score_thresh,
                 data_const.max_num_objects_per_class)
-                
-        if len(select_ids)==0 :
-            boxes_scores_rpn_id_label = np.empty((0,7))
+        try:
+            if len(select_ids)==0 :
+                boxes_scores_rpn_id_label = np.empty((0,7))
+        except:
+            import ipdb; ipdb.set_trace()
+
         else:
             boxes_scores_rpn_id_label = np.concatenate((
                 cls_boxes[select_ids],
@@ -96,6 +104,48 @@ def select_dets(
         start_id += num_boxes
 
     selected_dets = np.concatenate(selected_dets)
+    # guarantee at least have one object  
+    object_selected_dets = []
+    if selected_dets.shape[0] == 1:
+        for cls_ind, cls_name in enumerate(coco_classes):
+            if cls_ind == 0 or cls_ind == 1:
+                # remove the predictions with background label
+                continue
+            cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
+            cls_scores = scores[:, cls_ind]
+            cls_nms_keep_ids = np.array(nms_keep_indices[cls_ind])
+
+            select_ids = select_det_ids(
+                cls_boxes,
+                cls_scores,
+                cls_nms_keep_ids,
+                data_const.object_score_thresh,
+                data_const.max_num_objects_per_class,
+                required=True)
+
+            if len(select_ids)==0 :
+                boxes_scores_rpn_id_label = np.empty((0,7))
+            else:
+                boxes_scores_rpn_id_label = np.concatenate((
+                    cls_boxes[select_ids],
+                    np.expand_dims(cls_scores[select_ids],1),
+                    np.expand_dims(select_ids,1),
+                    np.expand_dims([cls_ind] * len(select_ids),1)), 1)
+
+            object_selected_dets.append(boxes_scores_rpn_id_label)
+
+        object_selected_dets = np.concatenate(object_selected_dets)
+        max_score_idx = np.argmax(object_selected_dets[:,4])
+        object_selected_det = object_selected_dets[max_score_idx,:]
+        
+        try:
+            selected_dets = np.concatenate((selected_dets, object_selected_det[None, :]))
+            start_end_ids[int(object_selected_det[6]-1)] = [1,2]
+        except Exception as e:
+            print(e)
+            import ipdb; ipdb.set_trace()
+        
+        
     return selected_dets, start_end_ids
 
 
@@ -107,13 +157,6 @@ def select(data_const):
     # Print where the boxes are coming from and where the output is written
     print(f'Boxes will be read from: {data_const.faster_rcnn_boxes}')
     print(f'Boxes will be written to: {select_boxes_dir}')
-    
-    # print('Writing constants to exp dir ...')
-    # data_const_json = os.path.join(data_const.proc_dir,'data_const.json')
-    # data_const.to_json(data_const_json)
-
-    # exp_const_json = os.path.join(data_const.proc_dir,'data_const.json')
-    # data_const.to_json(exp_const_json)
 
     print('Loading anno_list.json ...')
     anno_list = io.load_json_object(data_const.anno_list_json)

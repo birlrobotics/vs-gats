@@ -1,4 +1,3 @@
-
 import time
 import ipdb
 
@@ -20,18 +19,8 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
         if len(bboxs) == 0:
             return img    
 
-        # if scores is not None:
-        #     keep = np.where(scores > score_thresh)[0]
-        #     bboxs = bboxs[keep]
-        #     labels = labels[keep]
-        #     scores = scores[keep] 
-        #     if raw_action is not None:
-        #         raw_action = raw_action[keep]
-
-        # build the Font object
-        # import ipdb; ipdb.set_trace()
-        font = ImageFont.truetype(font='/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=15)
-        line_width = 2
+        font = ImageFont.truetype(font='/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=25)
+        line_width = 3
         if data_gt:
             Drawer = ImageDraw.Draw(img)
             r_color = random.choice(np.arange(256))
@@ -72,26 +61,32 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
 
         Drawer = ImageDraw.Draw(img)
 
+        # count = 0
         for h_idx in range(human_num):
             for i_idx in range(node_num):
                 if i_idx <= h_idx:
                     continue
                 edge_idx = labeled_edge_list[h_idx-1] + (i_idx-h_idx-1)
-                action_idx = np.where(raw_action[edge_idx] > 0.5)[0]
+                action_idx = np.where(raw_action[edge_idx] > score_thresh)[0]
 
                 text = str()
+                det_label, det_score = str(), str()
                 if len(action_idx) > 0:
                     
                     r_color = random.choice(np.arange(256))
                     g_color = random.choice(np.arange(256))
                     b_color = random.choice(np.arange(256))
 
-                    Drawer.rectangle(list(bboxs[h_idx]), outline=(120,0,0), width=line_width)
-                    Drawer.rectangle(list(bboxs[i_idx]), outline=(120,0,0), width=line_width)
                     text1 = metadata.coco_classes[labels[i_idx]]
+                    # if text1=='cake': continue
+                    Drawer.rectangle(list(bboxs[h_idx]), outline='#FF0000', width=line_width)
+                    Drawer.rectangle(list(bboxs[i_idx]), outline='#FF0000', width=line_width)
+
                     h, w = font.getsize(text1)
-                    Drawer.rectangle(xy=(bboxs[i_idx][0], bboxs[i_idx][1], bboxs[i_idx][0]+h+1, bboxs[i_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
-                    Drawer.text(xy=(bboxs[i_idx][0], bboxs[i_idx][1]), text=text1, font=font, fill=None)
+                    # Drawer.rectangle(xy=(bboxs[i_idx][0], bboxs[i_idx][1], bboxs[i_idx][0]+h+1, bboxs[i_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[i_idx][0], bboxs[i_idx][1]), text=text1, font=font, fill=None)
+                    Drawer.rectangle(xy=(bboxs[i_idx][0], bboxs[i_idx][1]-w-1, bboxs[i_idx][0]+h+1, bboxs[i_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    Drawer.text(xy=(bboxs[i_idx][0], bboxs[i_idx][1]-w-1), text=text1, font=font, fill=None)
                     im_w,im_h = img.size
                     x1,y1,x2,y2 = bboxs[h_idx]
                     x1_,y1_,x2_,y2_ = bboxs[i_idx]
@@ -107,11 +102,63 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
                     # import ipdb; ipdb.set_trace()
                     Drawer.line(((c0,r0),(c1,r1)), fill=(r_color,g_color,b_color), width=3)
                     
+                    shift = 0
                     for i in range(len(action_idx)):
-                        text = text + " " + metadata.action_classes[action_idx[i]]
-                        h, w = font.getsize(text)
-                        Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
-                    Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                    #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                    #     h, w = font.getsize(text)
+                    #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                        det_label = det_label + "  " + metadata.action_classes[action_idx[i]]
+                        det_score = det_score + "  " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                        h1, w1 = font.getsize(det_label)
+                        h2, w2 = font.getsize(det_score)
+                        Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1], bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                        # Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h2+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]), text=det_label, font=font, fill=None)
+                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]+w1+1), text=det_score, font=font, fill=None)
+
+                    # # up the bbox
+                    #     Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1), text=det_label, font=font, fill=None)
+                    # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-1), text=det_score, font=font, fill=None)
+
+                    # # down the bbox
+                    #     Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1), text=det_label, font=font, fill=None)
+                    # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_score, font=font, fill=None)
+
+                    # if count == 0 :
+                    #     count +=1
+                    #     # up the bbox
+                    #     for i in range(len(action_idx)):
+                    #     #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                    #     #     h, w = font.getsize(text)
+                    #     #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                    #         det_label = det_label + " " + metadata.action_classes[action_idx[i]]
+                    #         det_score = det_score + " " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                    #         h1, w1 = font.getsize(det_label)
+                    #         h2, w2 = font.getsize(det_score)
+                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1), text=det_label, font=font, fill=None)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-1), text=det_score, font=font, fill=None)
+
+                    # else:
+                    #     count+=1
+                    #     # down the bbox
+                    #     for i in range(len(action_idx)):
+                    #     #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                    #     #     h, w = font.getsize(text)
+                    #     #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                    #         det_label = det_label + " " + metadata.action_classes[action_idx[i]]
+                    #         det_score = det_score + " " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                    #         h1, w1 = font.getsize(det_label)
+                    #         h2, w2 = font.getsize(det_score)
+                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1), text=det_label, font=font, fill=None)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_score, font=font, fill=None)
+                    
         return img
 
     except Exception as e:
@@ -166,100 +213,6 @@ def vis_img_frcnn(img, bboxs, labels, scores=None, raw_action=None, score_thresh
     finally:
         pass
 
-# # VOC_BBOX_LABEL_NAMES
-# VOC_BBOX_LABEL_NAMES = list([
-#     'bg',
-#     'plane',
-#     'bike',
-#     'bird',
-#     'boat',
-#     'bottle',
-#     'bus',
-#     'car',
-#     'cat',
-#     'chair',
-#     'cow',
-#     'table',
-#     'dog',
-#     'horse',
-#     'moto',
-#     'person',
-#     'plant',
-#     'sheep',
-#     'sofa',
-#     'train',
-#     'tv'])
-
-# COLORS = {
-#     'bg': (24,11,162),   
-#     'plane': (72,255,67),
-#     'bike': (103,20,172),
-#     'bird': (204,43,66),
-#     'boat': (143,44,86),
-#     'bottle': (219,209,102),
-#     'bus': (114,8,118),
-#     'car': (243,240,16),
-#     'cat': (103,133,19),
-#     'chair': (48,6,107),
-#     'cow': (15,125,33),
-#     'table': (241,190,35),
-#     'dog': (110,188,231),
-#     'horse': (139,82,60),
-#     'moto': (10,209,67),
-#     'person': (130,58,74),
-#     'plant': (82,50,140),
-#     'sheep': (5,11,183),
-#     'sofa': (243,124,89),
-#     'train': (183,51,82),
-#     'tv': (248,175,142), 
-#     }
-
-# def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8):
-#     try:
-#         if len(bboxs) == 0:
-#             return img    
-
-#         if scores is not None:
-#             keep = np.where(scores > score_thresh)[0]
-#             bboxs = bboxs[keep]
-#             labels = labels[keep]
-#             scores = scores[keep] 
-#             if raw_action is not None:
-#                 raw_action = raw_action[keep]
-
-#         line_width = 1
-#         color = (120,0,0)
-#         # build the Font object
-#         font = ImageFont.truetype(font='/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=15)
-#         for idx, (bbox, label) in enumerate(zip(bboxs, labels)):
-#             Drawer = ImageDraw.Draw(img)
-#             # ipdb.set_trace()
-#             Drawer.rectangle(list(bbox), outline=(120,0,0), width=line_width)
-#             if raw_action is None:
-#                 text = metadata.coco_classes[label]
-#                 if scores is not None:
-#                     text = text + " " + '{:.3f}'.format(scores[idx])
-#                 h, w = font.getsize(text)
-#                 Drawer.rectangle(xy=(bbox[0], bbox[1], bbox[0]+h+1, bbox[1]+w+1), fill=color, outline=None, width=0)
-#                 Drawer.text(xy=(bbox[0], bbox[1]), text=text, font=font, fill=None)
-                
-#             else:
-#                 action_idx = np.where(raw_action[idx] > 0.5)[0]
-#                 text = str()
-#                 if len(action_idx) > 0:
-#                     for i in range(len(action_idx)):
-#                         text = text + " " + metadata.action_classes[action_idx[i]]
-#                         h, w = font.getsize(text)
-#                         Drawer.rectangle(xy=(bbox[0], bbox[1], bbox[0]+h+1, bbox[1]+w+1), fill=color, outline=None, width=0)
-#                     Drawer.text(xy=(bbox[0], bbox[1]), text=text, font=font, fill=None)
-#         return img
-
-#     except Exception as e:
-#         print("Error:", e)
-#         print("bboxs: {}, labels: {}" .format(bboxs, labels))
-#     finally:
-#         pass
-
 if __name__ == "__main__":
     from tensorboardX import SummaryWriter
     from PIL import Image, ImageDraw
@@ -276,223 +229,3 @@ if __name__ == "__main__":
         writer.add_image("test2", np.array(img2).transpose(2,0,1))
         time.sleep(5)
     writer.close()
-
-# def vis_image(img, ax=None):
-#     """Visualize a color image.
-
-#     Args:
-#         img (~numpy.ndarray): An array of shape :math:`(3, height, width)`.
-#             This is in RGB format and the range of its value is
-#             :math:`[0, 255]`.
-#         ax (matplotlib.axes.Axis): The visualization is displayed on this
-#             axis. If this is :obj:`None` (default), a new axis is created.
-
-#     Returns:
-#         ~matploblib.axes.Axes:
-#         Returns the Axes object with the plot for further tweaking.
-
-#     """
-
-#     if ax is None:
-#         fig = plot.figure()
-#         ax = fig.add_subplot(1, 1, 1)
-#     # CHW -> HWC
-#     img = img.transpose((1, 2, 0))
-#     ax.imshow(img.astype(np.uint8))
-#     return ax
-
-
-# def vis_bbox(img, bbox, label=None, score=None, ax=None):
-#     """Visualize bounding boxes inside image.
-
-#     Args:
-#         img (~numpy.ndarray): An array of shape :math:`(3, height, width)`.
-#             This is in RGB format and the range of its value is
-#             :math:`[0, 255]`.
-#         bbox (~numpy.ndarray): An array of shape :math:`(R, 4)`, where
-#             :math:`R` is the number of bounding boxes in the image.
-#             Each element is organized
-#             by :math:`(y_{min}, x_{min}, y_{max}, x_{max})` in the second axis.
-#         label (~numpy.ndarray): An integer array of shape :math:`(R,)`.
-#             The values correspond to id for label names stored in
-#             :obj:`label_names`. This is optional.
-#         score (~numpy.ndarray): A float array of shape :math:`(R,)`.
-#              Each value indicates how confident the prediction is.
-#              This is optional.
-#         label_names (iterable of strings): Name of labels ordered according
-#             to label ids. If this is :obj:`None`, labels will be skipped.
-#         ax (matplotlib.axes.Axis): The visualization is displayed on this
-#             axis. If this is :obj:`None` (default), a new axis is created.
-
-#     Returns:
-#         ~matploblib.axes.Axes:
-#         Returns the Axes object with the plot for further tweaking.
-
-#     """
-
-#     label_names = list(VOC_BBOX_LABEL_NAMES) + ['bg']
-#     # add for index `-1`
-#     if label is not None and not len(bbox) == len(label):
-#         raise ValueError('The length of label must be same as that of bbox')
-#     if score is not None and not len(bbox) == len(score):
-#         raise ValueError('The length of score must be same as that of bbox')
-
-#     # Returns newly instantiated matplotlib.axes.Axes object if ax is None
-#     ax = vis_image(img, ax=ax)
-
-#     # If there is no bounding box to display, visualize the image and exit.
-#     if len(bbox) == 0:
-#         return ax
-
-#     for i, bb in enumerate(bbox):
-#         xy = (bb[1], bb[0])
-#         height = bb[2] - bb[0]
-#         width = bb[3] - bb[1]
-#         ax.add_patch(plot.Rectangle(
-#             xy, width, height, fill=False, edgecolor='red', linewidth=2))
-
-#         caption = list()
-
-#         if label is not None and label_names is not None:
-#             lb = label[i]
-#             if not (-1 <= lb < len(label_names)):  # modfy here to add backgroud
-#                 raise ValueError('No corresponding name is given')
-#             caption.append(label_names[lb])
-#         if score is not None:
-#             sc = score[i]
-#             caption.append('{:.2f}'.format(sc))
-
-#         if len(caption) > 0:
-#             ax.text(bb[1], bb[0],
-#                     ': '.join(caption),
-#                     style='italic',
-#                     bbox={'facecolor': 'white', 'alpha': 0.5, 'pad': 0})
-#     return ax
-
-
-# def fig2data(fig):
-#     """
-#     brief Convert a Matplotlib figure to a 4D numpy array with RGBA 
-#     channels and return it
-
-#     @param fig: a matplotlib figure
-#     @return a numpy 3D array of RGBA values
-#     """
-#     # draw the renderer
-#     fig.canvas.draw()
-
-#     # Get the RGBA buffer from the figure
-#     w, h = fig.canvas.get_width_height()
-#     buf = np.fromstring(fig.canvas.tostring_argb(), dtype=np.uint8)
-#     buf.shape = (w, h, 4)
-
-#     # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
-#     buf = np.roll(buf, 3, axis=2)
-#     return buf.reshape(h, w, 4)
-
-
-# def fig4vis(fig):
-#     """
-#     convert figure to ndarray
-#     """
-#     ax = fig.get_figure()
-#     img_data = fig2data(ax).astype(np.int32)
-#     plot.close()
-#     # HWC->CHW
-#     return img_data[:, :, :3].transpose((2, 0, 1)) / 255.
-
-
-# def visdom_bbox(*args, **kwargs):
-#     fig = vis_bbox(*args, **kwargs)
-#     data = fig4vis(fig)
-#     return data
-
-
-# class Visualizer(object):
-#     """
-#     wrapper for visdom
-#     you can still access naive visdom function by 
-#     self.line, self.scater,self._send,etc.
-#     due to the implementation of `__getattr__`
-#     """
-
-#     def __init__(self, env='default', **kwargs):
-#         self.vis = visdom.Visdom(env=env, **kwargs)
-#         self._vis_kw = kwargs
-
-#         # e.g.('loss',23) the 23th value of loss
-#         self.index = {}
-#         self.log_text = ''
-
-#     def reinit(self, env='default', **kwargs):
-#         """
-#         change the config of visdom
-#         """
-#         self.vis = visdom.Visdom(env=env, **kwargs)
-#         return self
-
-#     def plot_many(self, d):
-#         """
-#         plot multi values
-#         @params d: dict (name,value) i.e. ('loss',0.11)
-#         """
-#         for k, v in d.items():
-#             if v is not None:
-#                 self.plot(k, v)
-
-#     def img_many(self, d):
-#         for k, v in d.items():
-#             self.img(k, v)
-
-#     def plot(self, name, y, **kwargs):
-#         """
-#         self.plot('loss',1.00)
-#         """
-#         x = self.index.get(name, 0)
-#         self.vis.line(Y=np.array([y]), X=np.array([x]),
-#                       win=name,
-#                       opts=dict(title=name),
-#                       update=None if x == 0 else 'append',
-#                       **kwargs
-#                       )
-#         self.index[name] = x + 1
-
-#     def img(self, name, img_, **kwargs):
-#         """
-#         self.img('input_img',t.Tensor(64,64))
-#         self.img('input_imgs',t.Tensor(3,64,64))
-#         self.img('input_imgs',t.Tensor(100,1,64,64))
-#         self.img('input_imgs',t.Tensor(100,3,64,64),nrows=10)
-#         !!don't ~~self.img('input_imgs',t.Tensor(100,64,64),nrows=10)~~!!
-#         """
-#         self.vis.images(t.Tensor(img_).cpu().numpy(),
-#                         win=name,
-#                         opts=dict(title=name),
-#                         **kwargs
-#                         )
-
-#     def log(self, info, win='log_text'):
-#         """
-#         self.log({'loss':1,'lr':0.0001})
-#         """
-#         self.log_text += ('[{time}] {info} <br>'.format(
-#             time=time.strftime('%m%d_%H%M%S'), \
-#             info=info))
-#         self.vis.text(self.log_text, win)
-
-#     def __getattr__(self, name):
-#         return getattr(self.vis, name)
-
-#     def state_dict(self):
-#         return {
-#             'index': self.index,
-#             'vis_kw': self._vis_kw,
-#             'log_text': self.log_text,
-#             'env': self.vis.env
-#         }
-
-#     def load_state_dict(self, d):
-#         self.vis = visdom.Visdom(env=d.get('env', self.vis.env), **(self.d.get('vis_kw')))
-#         self.log_text = d.get('log_text', '')
-#         self.index = d.get('index', dict())
-#         return self

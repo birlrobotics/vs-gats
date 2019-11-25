@@ -118,11 +118,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 edge_num = train_data['edge_num']
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
-                # node_one_hot = train_data['node_one_hot']
                 word2vec = train_data['word2vec']
-                # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
-                # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
-                # spatial_feat = torch.nn.functional.normalize(spatial_feat,p=2,dim=1)
                 features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
                 # if idx == 10: break    
                 if phase == 'train':
@@ -174,7 +170,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0407 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
+        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,

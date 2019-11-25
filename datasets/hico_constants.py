@@ -6,7 +6,7 @@ class HicoConstants(io.JsonSerializableClass):
     def __init__(
             self,
             clean_dir=os.path.join(os.getcwd(),'datasets/hico'),
-            proc_dir=os.path.join(os.getcwd(),'datasets/processed'),
+            proc_dir=os.path.join(os.getcwd(),'datasets/processed/hico'),
             res_dir=os.path.join(os.getcwd(),'result/hico'),
             feat_type='fc7',
             exp_ver ='test'):
@@ -75,3 +75,6 @@ class HicoConstants(io.JsonSerializableClass):
 
         # word2vec
         self.word2vec = os.path.join(self.proc_dir, 'hico_word2vec.hdf5')
+
+        # inference directory
+        self.infer_dir = './inference_imgs'

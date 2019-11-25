@@ -130,25 +130,10 @@ class GNN(nn.Module):
         # ipdb.set_trace()
         alpha = F.softmax(nodes.mailbox['a_feat'], dim=1)
         alpha_lang = F.softmax(nodes.mailbox['a_feat_lang'], dim=1)
-        # if self.multi_attn:
-        #     alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
-        #     alpha = (alpha1+alpha2)/2
-        #     z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2'], dim=2)
-        # # else:
-        #     alpha = alpha1
-        #     z_raw_f = nodes.mailbox['nei_n_f']
-        #    # z_raw_f = nodes.mailbox['e_f']
-        # z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f']], dim=2)
-        # z_raw_f = nodes.mailbox['e_f']
-        # ipdb.set_trace()
+
         z_raw_f = nodes.mailbox['nei_n_f']+nodes.mailbox['e_f']
         # z_raw_f = nodes.mailbox['nei_n_f']
         z_f = torch.sum( alpha * z_raw_f, dim=1)
-
-        # z_raw_f_sp = nodes.mailbox['e_f']
-        # z_f_sp = torch.sum( alpha * z_raw_f_sp, dim=1)
-        # z_raw_f_lang = torch.cat([nodes.mailbox['nei_n_w'],nodes.mailbox['e_f_lang']], dim=2)
-        # z_raw_f_lang = nodes.mailbox['e_f_lang']
 
         z_raw_f_lang = nodes.mailbox['nei_n_w']
         z_f_lang = torch.sum(alpha_lang * z_raw_f_lang, dim=1)
@@ -156,10 +141,8 @@ class GNN(nn.Module):
         # we cannot return 'alpha' for the different dimension 
         if self.training or validation:
             return {'z_f': z_f, 'z_f_lang': z_f_lang}
-            # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp}
         else:
             return {'z_f': z_f, 'z_f_lang': z_f_lang, 'alpha': alpha, 'alpha_lang': alpha_lang}
-            # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp, 'alpha': alpha, 'alpha_lang': alpha_lang}
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list, pop_feat=False):
         
@@ -203,11 +186,6 @@ class GNN(nn.Module):
         g.edata.pop('e_f_lang')
         g.edata.pop('a_feat_lang')
 
-        # if self.multi_attn:
-        #     g.ndata.pop('word2vec')
-        #     g.edata.pop('s_f')
-        #     g.edata.pop('e_f2')
-        #     g.edata.pop('a_feat2')
         if pop_feat:
             return g.ndata.pop('new_n_f'), g.ndata.pop('new_n_f_lang')
 
@@ -237,12 +215,6 @@ class GRNN(nn.Module):
                 return feat, feat_lang
             else:
                 self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
-            # if self.training or validation:
-            #     output = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
-            #     return output
-            # else:
-            #     output, alpha = self.gnn(batch_graph, batch_h_node_list, batch_obj_node_list, batch_h_h_e_list, batch_o_o_e_list, batch_h_o_e_list)
-            #     return output, alpha
         except Exception as e:
             print(e)
             ipdb.set_trace()

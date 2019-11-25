@@ -30,8 +30,6 @@ def main(args):
     try:
         # load checkpoint
         checkpoint = torch.load(args.pretrained, map_location=device)
-        # in_feat, out_feat, hidden_size, action_num  = checkpoint['in_feat'], checkpoint['out_feat'],\
-                                                        # checkpoint['hidden_size'], checkpoint['action_num']
         print('Checkpoint loaded!')
 
         # set up model and initialize it with uploaded checkpoint
@@ -52,18 +50,11 @@ def main(args):
         os.mkdir(data_const.result_dir)
     pred_hoi_dets_hdf5 = os.path.join(data_const.result_dir, 'pred_hoi_dets.hdf5')
     pred_hois = h5py.File(pred_hoi_dets_hdf5,'w')
-    # # print('Creating json file for predicted hoi dets ...')
-    # hoi_box_score = {}
-    # # prepare for data
-    # dataset_list = io.load_json_object(data_const.split_ids_json)
-    # test_list = dataset_list['test']
-    # test_data = h5py.File(data_const.hico_test_data, 'r')
+
     test_dataset = HicoDataset(data_const=data_const, subset='test')
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
     # for global_id in tqdm(test_list): 
     for data in tqdm(test_dataloader):
-        # if global_id not in test_data.keys(): continue
-        # train_data = test_data[global_id]
         train_data = data
         global_id = train_data['global_id'][0]
         img_name = train_data['img_name'][0]
@@ -71,16 +62,11 @@ def main(args):
         roi_scores = train_data['roi_scores'][0]
         roi_labels = train_data['roi_labels'][0]
         node_num = train_data['node_num']
-        # node_labels = train_data['node_labels']
         features = train_data['features'] 
         spatial_feat = train_data['spatial_feat']
-        # node_one_hot = train_data['node_one_hot'] 
         word2vec = train_data['word2vec']
-        
-        # if node_num ==0 or node_num ==1: continue
 
         # referencing
-        # features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
         features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), word2vec.to(device)
         outputs, attn, attn_lang = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
         
@@ -89,7 +75,6 @@ def main(args):
         attn = attn.cpu().detach().numpy()
         attn_lang = attn_lang.cpu().detach().numpy()
         # save detection result
-        # hoi_box_score[file_name.split('.')[0]] = {}
         pred_hois.create_group(global_id)
         det_data_dict = {}
         h_idxs = np.where(roi_labels == 1)[0]

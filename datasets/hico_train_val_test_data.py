@@ -11,7 +11,7 @@ import h5py
 from datasets import metadata
 from datasets.hico_constants import HicoConstants
 import utils.io as io 
-from utils.vis_tool import vis_img
+from utils.vis_tool import vis_img, vis_img_frcnn
 from utils.bbox_utils import compute_iou
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -33,7 +33,7 @@ matplotlib.use('TKAgg')
 def get_node_index(classname, bbox, det_classes, det_boxes, node_num, labeled=True):
     bbox = np.array(bbox, dtype=np.float32)
  
-    max_iou = 0.5  # Use 0.5 as a threshold for evaluation
+    max_iou = 0.3  # Use 0.5 as a threshold for evaluation
     max_iou_index = -1
 
     for i_node in range(node_num):
@@ -72,33 +72,34 @@ def parse_data(data_const,args):
     list_action = anno_data['list_action']
 
     # to save images with bad selected detection
-    bad_dets_imgs = {'0': [], '1': []} 
+    bad_dets_imgs = {'0': [], '1': [], 'no_human': []} 
     # parsing data
     for phase in ['bbox_train', 'bbox_test']:
 
         if not args.vis_result:
             if phase == 'bbox_train':
                 if args.feat_type == 'fc7':
-                    print('Creating hico_trainval_data_fc7.hdf5 file ...')
-                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_fc7.hdf5')
+                    print('Creating hico_trainval_data_fc7_edge.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_fc7_edge.hdf5')
                     save_data = h5py.File(hdf5_file,'w')
                 else:
-                    print('Creating hico_trainval_data_pool.hdf5 file ...')
-                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool.hdf5')
+                    print('Creating hico_trainval_data_pool_edge.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_trainval_data_pool_edge.hdf5')
                     save_data = h5py.File(hdf5_file,'w')
             else:
                 if args.feat_type == 'fc7':
-                    print('Creating hico_test_data_fc7.hdf5 file ...')
-                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_fc7.hdf5')
+                    print('Creating hico_test_data_fc7_edge.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_fc7_edge.hdf5')
                     save_data = h5py.File(hdf5_file,'w')
                 else:
-                    print('Creating hico_test_data_pool.hdf5 file ...')
-                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool.hdf5')
+                    print('Creating hico_test_data_pool_edge.hdf5 file ...')
+                    hdf5_file = os.path.join(data_const.proc_dir,'hico_test_data_pool_edge.hdf5')
                     save_data = h5py.File(hdf5_file,'w')
 
         data = anno_data[phase]
         if args.vis_result:
-            img_list = [1761,23,44,50,53,72,75,79,93,109,127,129,138,139,490,496]
+            # img_list = [1761,23,44,50,53,72,75,79,93,109,127,129,138,139,490,496]
+            img_list = [14663] #range(data.shape[1])
         else:
             img_list = range(data.shape[1])
 
@@ -115,6 +116,7 @@ def parse_data(data_const,args):
                 continue
             if selected_det_data.shape[0] == 1:
                 bad_dets_imgs['1'].append(global_id)
+                continue
             # TypeError: Indexing elements must be in increasing order
             # det_feat = det_feat[selected_det_data[:, 5], :]
             feat = []
@@ -128,6 +130,10 @@ def parse_data(data_const,args):
             det_class = selected_det_data[:, -1].astype(int)
             det_scores = selected_det_data[:, 4]
 
+            if len(np.where(det_class == 1)[0])==0:
+                bad_dets_imgs['no_human'].append(global_id)
+                continue
+
             # from coco label to hico label
             # det_class = np.array(metadata.coco_to_hico)[det_class].astype(int)
             
@@ -135,13 +141,14 @@ def parse_data(data_const,args):
             # det_class = np.array(metadata.coco_pytorch_to_coco)[det_class.astype(int)].astype(int)
 
             # calculate the number of nodes
-            # human_num = len(np.where(det_class == 1)[0])
-            # obj_num = len(det_class) - human_num
-            # node_num = human_num + obj_num
+            human_num = len(np.where(det_class == 1)[0])
             node_num = len(det_class)
-
+            labeled_edge_list = np.cumsum(node_num - np.arange(human_num) -1)
+            labeled_edge_num = labeled_edge_list[-1]
+            labeled_edge_list[-1] = 0
+            # import ipdb; ipdb.set_trace()
             # parse the original data to get node labels
-            node_labels = np.zeros((node_num, action_class_num))
+            edge_labels = np.zeros((labeled_edge_num, action_class_num))
             # ipdb.set_trace()
             if args.vis_result:
                 image_gt = Image.open(os.path.join(data_const.clean_dir, 'images/train2015', img_name)).convert('RGB')
@@ -149,43 +156,41 @@ def parse_data(data_const,args):
 
             for i_hoi in range(data['hoi'][0,i_img]['id'].shape[1]):
                 try:
-                    for j in range(data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x1'].shape[1]):
+                    for j_h in range(data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x1'].shape[1]):
 
                         hoi_id = data['hoi'][0, i_img]['id'][0, i_hoi][0, 0]
                         action_id = metadata.hoi_to_action[hoi_id - 1]  # !NOTE: Need to subtract 1 
 
                         # ipdb.set_trace()
                         classname = 'person'
-                        x1 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x1'][0, j][0, 0]
-                        y1 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y1'][0, j][0, 0]
-                        x2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x2'][0, j][0, 0]
-                        y2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y2'][0, j][0, 0]
-                        human_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=args.labeled)
+                        h_x1 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x1'][0, j_h][0, 0]
+                        h_y1 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y1'][0, j_h][0, 0]
+                        h_x2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['x2'][0, j_h][0, 0]
+                        h_y2 = data['hoi'][0, i_img]['bboxhuman'][0, i_hoi]['y2'][0, j_h][0, 0]
+                        human_index = get_node_index(classname, [h_x1, h_y1, h_x2, h_y2], det_class, det_boxes, node_num, labeled=args.labeled)
+
+                        j_o = data['hoi'][0, i_img]['connection'][0,i_hoi][j_h][1] - 1
+                        classname = list_action['nname'][hoi_id-1, 0][0]    # !NOTE: Need to subtract 1
+                        o_x1 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['x1'][0, j_o][0, 0]
+                        o_y1 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y1'][0, j_o][0, 0]
+                        o_x2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['x2'][0, j_o][0, 0]
+                        o_y2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y2'][0, j_o][0, 0]
+                        obj_index = get_node_index(classname, [o_x1, o_y1, o_x2, o_y2], det_class, det_boxes, node_num, labeled=args.labeled)
 
                         if args.vis_result:
                             raw_action[action_id] = 1
-                            image_gt = vis_img(image_gt, [[x1,y1,x2,y2]], [[1]], raw_action=[raw_action])
-
-                        classname = list_action['nname'][hoi_id-1, 0][0]    # !NOTE: Need to subtract 1
-                        x1 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['x1'][0, j][0, 0]
-                        y1 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y1'][0, j][0, 0]
-                        x2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['x2'][0, j][0, 0]
-                        y2 = data['hoi'][0, i_img]['bboxobject'][0, i_hoi]['y2'][0, j][0, 0]
-                        obj_index = get_node_index(classname, [x1, y1, x2, y2], det_class, det_boxes, node_num, labeled=args.labeled)
-
-                        if args.vis_result:
-                            image_gt = vis_img(image_gt, [[x1,y1,x2,y2]], [metadata.coco_classes.index(classname)], raw_action=[raw_action])
+                            image_gt = vis_img(image_gt, [[h_x1, h_y1, h_x2, h_y2],[o_x1, o_y1, o_x2, o_y2]], [1, metadata.coco_classes.index(classname)], raw_action=action_id, data_gt=True)
 
                         if human_index != -1 and obj_index != -1:
-                            node_labels[human_index, action_id] = 1
-                            node_labels[obj_index, action_id] = 1
+                            edge_idx = labeled_edge_list[human_index-1] + (obj_index-human_index-1)
+                            edge_labels[edge_idx, action_id] = 1 
                 except IndexError:
                     pass
             # visualizing result instead of saving result
             if args.vis_result:
                 # ipdb.set_trace()
                 image_res = Image.open(os.path.join(data_const.clean_dir, 'images/train2015', img_name)).convert('RGB')
-                result = vis_img(image_res, det_boxes, det_class, det_scores, node_labels, score_thresh=0.4)
+                result = vis_img(image_res, det_boxes, det_class, det_scores, edge_labels, score_thresh=0.4)
                 plt.figure(figsize=(100,100))
                 plt.suptitle(img_name)
                 plt.subplot(1,2,1)
@@ -196,7 +201,7 @@ def parse_data(data_const,args):
                 plt.title('selected_ground_truth')
                 # plt.axis('off')
                 plt.ion()
-                plt.pause(10)
+                plt.pause(100)
                 plt.close()
             # save precessed data
             else:
@@ -206,13 +211,13 @@ def parse_data(data_const,args):
                 save_data[global_id].create_dataset('boxes', data=det_boxes)
                 save_data[global_id].create_dataset('classes', data=det_class)
                 save_data[global_id].create_dataset('scores', data=det_scores)
-                save_data[global_id].create_dataset('node_labels', data=node_labels)
+                save_data[global_id].create_dataset('edge_labels', data=edge_labels)
                 save_data[global_id].create_dataset('feature', data=feat)
         if not args.vis_result:
             save_data.close()
     # create file to save images with no selected detection
-    print(f"bad instance detection: <0 det>---{len(bad_dets_imgs['0'])}, <1 det>---{len(bad_dets_imgs['1'])}")
-    io.dump_json_object(bad_dets_imgs, os.path.join('result', 'bad_faster_rcnn_det_imgs.json'))
+    print(f"bad instance detection: <0 det>---{len(bad_dets_imgs['0'])}, <1 det>---{len(bad_dets_imgs['1'])}, <no human det>---{len(bad_dets_imgs['no_human'])}")
+    io.dump_json_object(bad_dets_imgs, os.path.join('result', 'bad_faster_rcnn_det_imgs_edge.json'))
 
     print('Finished parsing datas!')    
 
@@ -227,16 +232,16 @@ def faster_rcnn_det_result(img_name):
     input = input.to(devise)
     outputs = model([input], save_feat=False)
     # ipdb.set_trace()
-    img = vis_img(image, outputs[1][0]['boxes'].cpu().detach().numpy(), \
+    img = vis_img_frcnn(image, outputs[1][0]['boxes'].cpu().detach().numpy(), \
                          np.array(metadata.coco_pytorch_to_coco)[outputs[1][0]['labels'].cpu().detach().numpy()].astype(int), \
                          outputs[1][0]['scores'].cpu().detach().numpy(),\
-                         score_thresh=0.4)
+                         score_thresh=0.9)
     plt.figure(figsize=(100,100))
     plt.subplot(1,1,1)
     plt.imshow(img)
     plt.axis('off')
     plt.ion()
-    plt.pause(10)
+    plt.pause(100)
     plt.close()
 
 if __name__ == "__main__":
@@ -252,16 +257,15 @@ if __name__ == "__main__":
                         help='visualize the result or not')
     parse.add_argument('--labeled', action="store_true", default=False,
                         help='take instance detection label into account when getting node index')
-    parse.add_argument("--feat_type", '--f_t', type=str, default='fc7', choices=['fc7', 'pool'],
+    parse.add_argument("--feat_type", '--f_t', type=str, default='fc7', choices=['fc7', 'pool'], required=True,
                         help="which feature do you want to parse: fc7")
+    parse.add_argument("--label_type", '--l_t', type=str, default='node', choices=['node', 'edge'],
+                        help="which type of the label do you want: node")
 
     args = parse.parse_args()
     if args.frcnn:
-        faster_rcnn_det_result('HICO_train2015_00001762.jpg')
+        faster_rcnn_det_result('HICO_train2015_00014663.jpg')
     else:
         data_const = HicoConstants()
         # parse training data
         parse_data(data_const, args)
-
-
-
