@@ -44,7 +44,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
