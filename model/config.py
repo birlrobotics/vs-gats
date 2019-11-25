@@ -19,7 +19,7 @@ class CONFIGURATION(object):
             if feat_type=='fc7':
                 if layer==1:
                     # readout
-                    self.G_ER_L_S = [300+16+300, 1024, 117]
+                    self.G_ER_L_S = [1024+16+1024, 1024, 117]
                     self.G_ER_A   = ['ReLU', 'Identity']
                     self.G_ER_B   = bias
                     self.G_ER_BN  = bn
