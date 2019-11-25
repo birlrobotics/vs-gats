@@ -44,7 +44,7 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
@@ -62,7 +62,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=250, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -118,7 +118,11 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 edge_num = train_data['edge_num']
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
+                # node_one_hot = train_data['node_one_hot']
                 word2vec = train_data['word2vec']
+                # features, node_labels = torch.FloatTensor(features).to(device), torch.FloatTensor(node_labels).to(device)
+                # features, spatial_feat, node_one_hot, node_labels = features.to(device), spatial_feat.to(device), node_one_hot.to(device), node_labels.to(device)
+                # spatial_feat = torch.nn.functional.normalize(spatial_feat,p=2,dim=1)
                 features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
                 # if idx == 10: break    
                 if phase == 'train':
@@ -170,7 +174,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
+        if epoch_loss<0.0407 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,

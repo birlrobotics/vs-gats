@@ -33,7 +33,7 @@ class Predictor(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, edge):
-        feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f']], dim=1)
+        feat = torch.cat([edge.dst['c_new_n_f'], edge.data['s_f'], edge.src['c_new_n_f']], dim=1)
         # feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.dst['z_f_sp'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f'], edge.src['z_f_sp']], dim=1)
         pred = self.classifier(feat)
         # if the criterion is BCELoss, you need to uncomment the following code
@@ -43,7 +43,8 @@ class Predictor(nn.Module):
 class AGRNN(nn.Module):
     def __init__(self, feat_type='fc7', bias=True, bn=True, dropout=None, multi_attn=False, layer=1, diff_edge=True):
         super(AGRNN, self).__init__()
- 
+        # self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        # self.extractor = S3D_G(initial_temporal_size=32, in_channel=3, gate=True)
         self.multi_attn = multi_attn
         self.layer = layer
         self.diff_edge = diff_edge
@@ -205,6 +206,18 @@ class AGRNN(nn.Module):
             else:
                 batch_graph.apply_nodes(self.h_node_update, batch_h_node_list+batch_obj_node_list)
             batch_graph.apply_edges(self.edge_readout, tuple(zip(*(batch_readout_h_o_e_list+batch_readout_h_h_e_list))))
+
+        # update node feature at the last layer 
+        # if not len(batch_h_node_list) == 0:
+        #     batch_graph.apply_nodes(self.h_node_readout, batch_h_node_list)
+        # if not len(batch_obj_node_list) == 0:
+        #     batch_graph.apply_nodes(self.o_node_readout, batch_obj_node_list)
+
+        # apply edge READOUT function to get predictions
+        # if not len(batch_readout_h_h_e_list) == 0:
+        #     batch_graph.apply_edges(self.h_h_edge_readout, tuple(zip(*batch_readout_h_h_e_list)))
+        # if not len(batch_readout_h_o_e_list) == 0:
+        #     batch_graph.apply_edges(self.h_o_edge_readout, tuple(zip(*batch_readout_h_o_e_list)))
 
         # import ipdb; ipdb.set_trace()
         if self.training or validation:
