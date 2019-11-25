@@ -82,10 +82,12 @@ def main(args):
         # referencing
         # features, spatial_feat, node_one_hot = features.to(device), spatial_feat.to(device), node_one_hot.to(device)
         features, spatial_feat, word2vec = features.to(device), spatial_feat.to(device), word2vec.to(device)
-        outputs = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
+        outputs, attn, attn_lang = model(node_num, features, spatial_feat, word2vec, [roi_labels])    # !NOTE: it is important to set [roi_labels] 
         
         action_score = nn.Sigmoid()(outputs)
         action_score = action_score.cpu().detach().numpy()
+        attn = attn.cpu().detach().numpy()
+        attn_lang = attn_lang.cpu().detach().numpy()
         # save detection result
         # hoi_box_score[file_name.split('.')[0]] = {}
         pred_hois.create_group(global_id)

@@ -16,11 +16,11 @@ class H_H_EdgeApplyModule(nn.Module):
     def forward(self, edge):
         feat = torch.cat([edge.src['n_f'], edge.data['s_f'], edge.dst['n_f']], dim=1)
         # feat_lang = torch.cat([edge.src['word2vec'], edge.data['s_f'], edge.dst['word2vec']], dim=1)
-        # feat_lang = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
+        feat_lang = torch.cat([edge.src['word2vec'], edge.dst['word2vec']], dim=1)
         e_feat = self.edge_fc(feat)
-        # e_feat_lang = self.edge_fc_lang(feat_lang)
+        e_feat_lang = self.edge_fc_lang(feat_lang)
   
-        return {'e_f': e_feat}
+        return {'e_f': e_feat, 'e_f_lang': e_feat_lang}
 
 class O_O_EdgeApplyModule(nn.Module):
     def __init__(self, CONFIG, multi_attn=False):
@@ -112,7 +112,7 @@ class GNN(nn.Module):
         self.multi_attn = multi_attn
         self.diff_edge = diff_edge
         self.apply_h_h_edge = H_H_EdgeApplyModule(CONFIG, multi_attn)
-        # self.apply_edge_attn1 = E_AttentionModule1(CONFIG)  
+        self.apply_edge_attn1 = E_AttentionModule1(CONFIG)  
         self.apply_h_node = H_NodeApplyModule(CONFIG)
         if diff_edge:
             self.apply_h_o_edge = H_O_EdgeApplyModule(CONFIG, multi_attn)
@@ -123,25 +123,42 @@ class GNN(nn.Module):
         # ipdb.set_trace()
         if self.multi_attn:
             return {'nei_n_f': edges.src['n_f'], 'e_f2': edges.data['e_f2'], 'a_feat': edges.data['a_feat'], 'a_feat2': edges.data['a_feat2']}
-        return {'nei_n_f': edges.src['n_f'], 'nei_n_w': edges.src['word2vec'], 'e_f': edges.data['e_f']}
+        return {'nei_n_f': edges.src['n_f'], 'nei_n_w': edges.src['word2vec'], 'e_f': edges.data['e_f'], 'e_f_lang': edges.data['e_f_lang'], 'a_feat': edges.data['a_feat'], 'a_feat_lang': edges.data['a_feat_lang']}
 
     def _reduce_func(self, nodes):
-
+        # calculate the features of virtual nodes 
+        # ipdb.set_trace()
+        alpha = F.softmax(nodes.mailbox['a_feat'], dim=1)
+        alpha_lang = F.softmax(nodes.mailbox['a_feat_lang'], dim=1)
+        # if self.multi_attn:
+        #     alpha2 = F.softmax(nodes.mailbox['a_feat2'], dim=1)
+        #     alpha = (alpha1+alpha2)/2
+        #     z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f2'], dim=2)
+        # # else:
+        #     alpha = alpha1
+        #     z_raw_f = nodes.mailbox['nei_n_f']
+        #    # z_raw_f = nodes.mailbox['e_f']
+        # z_raw_f = torch.cat([nodes.mailbox['nei_n_f'], nodes.mailbox['e_f']], dim=2)
+        # z_raw_f = nodes.mailbox['e_f']
+        # ipdb.set_trace()
         z_raw_f = nodes.mailbox['nei_n_f']+nodes.mailbox['e_f']
         # z_raw_f = nodes.mailbox['nei_n_f']
-        # ipdb.set_trace()
-        z_f = torch.sum(z_raw_f, dim=1) / nodes.mailbox['nei_n_f'].shape[1]
+        z_f = torch.sum( alpha * z_raw_f, dim=1)
 
+        # z_raw_f_sp = nodes.mailbox['e_f']
+        # z_f_sp = torch.sum( alpha * z_raw_f_sp, dim=1)
+        # z_raw_f_lang = torch.cat([nodes.mailbox['nei_n_w'],nodes.mailbox['e_f_lang']], dim=2)
+        # z_raw_f_lang = nodes.mailbox['e_f_lang']
 
         z_raw_f_lang = nodes.mailbox['nei_n_w']
-        z_f_lang = torch.sum(z_raw_f_lang, dim=1) / nodes.mailbox['nei_n_w'].shape[1]
+        z_f_lang = torch.sum(alpha_lang * z_raw_f_lang, dim=1)
         # when training batch_graph, here will process batch_graph graph by graph, 
         # we cannot return 'alpha' for the different dimension 
         if self.training or validation:
             return {'z_f': z_f, 'z_f_lang': z_f_lang}
             # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp}
         else:
-            return {'z_f': z_f, 'z_f_lang': z_f_lang}
+            return {'z_f': z_f, 'z_f_lang': z_f_lang, 'alpha': alpha, 'alpha_lang': alpha_lang}
             # return {'z_f': z_f, 'z_f_lang': z_f_lang, 'z_f_sp': z_f_sp, 'alpha': alpha, 'alpha_lang': alpha_lang}
 
     def forward(self, g, h_node, o_node, h_h_e_list, o_o_e_list, h_o_e_list, pop_feat=False):
@@ -169,22 +186,22 @@ class GNN(nn.Module):
         else:
             # g.apply_edges(self.apply_h_h_edge, tuple(zip(*(h_h_e_list+h_o_e_list+o_o_e_list))))
             g.apply_edges(self.apply_h_h_edge, g.edges())
-            # g.apply_edges(self.apply_edge_attn1)
+            g.apply_edges(self.apply_edge_attn1)
             g.update_all(self._message_func, self._reduce_func)
             g.apply_nodes(self.apply_h_node, h_node+o_node)
 
         # !NOTE:PAY ATTENTION WHEN ADDING MORE FEATURE
-        # g.ndata.pop('n_f')
-        # # g.edata.pop('s_f')
-        # g.ndata.pop('word2vec')
+        g.ndata.pop('n_f')
+        # g.edata.pop('s_f')
+        g.ndata.pop('word2vec')
 
-        # g.ndata.pop('z_f')
-        # g.edata.pop('e_f')
-        # g.edata.pop('a_feat')
+        g.ndata.pop('z_f')
+        g.edata.pop('e_f')
+        g.edata.pop('a_feat')
 
-        # g.ndata.pop('z_f_lang')
-        # g.edata.pop('e_f_lang')
-        # g.edata.pop('a_feat_lang')
+        g.ndata.pop('z_f_lang')
+        g.edata.pop('e_f_lang')
+        g.edata.pop('a_feat_lang')
 
         # if self.multi_attn:
         #     g.ndata.pop('word2vec')

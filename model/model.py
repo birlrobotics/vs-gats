@@ -33,7 +33,7 @@ class Predictor(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, edge):
-        feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f']], dim=1)
+        feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.src['new_n_f_lang'], edge.src['new_n_f']], dim=1)
         # feat = torch.cat([edge.dst['new_n_f'], edge.dst['new_n_f_lang'], edge.dst['z_f_sp'], edge.data['s_f'], edge.src['new_n_f_lang'], edge.src['new_n_f'], edge.src['z_f_sp']], dim=1)
         pred = self.classifier(feat)
         # if the criterion is BCELoss, you need to uncomment the following code
@@ -225,8 +225,9 @@ class AGRNN(nn.Module):
             # !NOTE: cannot use "batch_readout_h_o_e_list+batch_readout_h_h_e_list" because of the wrong order
             return batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['pred']
         else:
-            return batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['pred']
-
+            return batch_graph.edges[tuple(zip(*batch_readout_edge_list))].data['pred'], \
+                   batch_graph.nodes[batch_h_node_list].data['alpha'], \
+                   batch_graph.nodes[batch_h_node_list].data['alpha_lang'] 
 
 if __name__ == "__main__":
     model = AGRNN()
