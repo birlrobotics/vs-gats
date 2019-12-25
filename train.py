@@ -44,10 +44,17 @@ def run_model(args, data_const):
     dataloader = {'train': train_dataloader, 'val': val_dataloader}
     print('set up dataloader successfully')
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() and args.gpu else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
     model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
+
+    # calculate the amount of all the learned parameters
+    parameter_num = 0
+    for param in model.parameters():
+        parameter_num += param.numel()
+    print(f'The parameters number of the model is {parameter_num / 1e6} million')
+
     # load pretrained model
     if args.pretrained:
         print(f"loading pretrained model {args.pretrained}")
@@ -77,6 +84,7 @@ def run_model(args, data_const):
             model_config['drop_out'] = args.drop_prob
             model_config['optimizer'] = args.optim
             model_config['diff_edge'] = args.diff_edge
+            model_config['model_parameters'] = parameter_num
             io.dump_json_object(model_config, os.path.join(args.save_dir, args.exp_ver, 'l1_config.json'))
         elif i==1:
             model_config = model.CONFIG2.save_config()
