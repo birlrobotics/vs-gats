@@ -11,8 +11,7 @@ import random
 matplotlib.use('Agg')
 from matplotlib import pyplot as plot
 from PIL import Image, ImageDraw, ImageFont
-from datasets import metadata
-
+from datasets import metadata, vcoco_metadata
 
 def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, data_gt=False):
     try:
@@ -52,7 +51,6 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
             Drawer.text(xy=(bboxs[0][0], bboxs[0][1]), text=text, font=font, fill=None)
 
             return img
-
 
         human_num = len(np.where(labels == 1)[0])
         node_num = len(labels)
@@ -166,6 +164,122 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
         print("bboxs: {}, labels: {}" .format(bboxs, labels))
     finally:
         pass
+
+def vis_img_vcoco(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, data_gt=False):
+    try:
+        if len(bboxs) == 0:
+            return img    
+
+        font = ImageFont.truetype(font='/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=25)
+        line_width = 3
+        if data_gt:
+            Drawer = ImageDraw.Draw(img)
+            r_color = random.choice(np.arange(256))
+            g_color = random.choice(np.arange(256))
+            b_color = random.choice(np.arange(256))
+
+            Drawer.rectangle(list(bboxs[0]), outline=(120,0,0), width=line_width)
+            Drawer.rectangle(list(bboxs[1]), outline=(120,0,0), width=line_width)
+            im_w,im_h = img.size
+            x1,y1,x2,y2 = bboxs[0]
+            x1_,y1_,x2_,y2_ = bboxs[1]
+            # import ipdb; ipdb.set_trace()
+            c_xh = int(0.5*x1)+int(0.5*x2)
+            c_yh = int(0.5*y1)+int(0.5*y2)
+            c_xo = int(0.5*x1_)+int(0.5*x2_)
+            c_yo = int(0.5*y1_)+int(0.5*y2_)
+            c_xh = max(0,min(c_xh,im_w-1))
+            c_yh = max(0,min(c_yh,im_h-1))
+            c_xo = max(0,min(c_xo,im_w-1))
+            c_yo = max(0,min(c_yo,im_h-1))
+            
+            Drawer.line(((c_xo,c_yo),(c_xh,c_yh)), fill=(r_color,g_color,b_color), width=3)
+            # print(c_xo,c_yo,c_xh,c_yh)
+                    
+            
+            text =  vcoco_metadata.action_class_with_object[raw_action]
+            h, w = font.getsize(text)
+            Drawer.rectangle(xy=(bboxs[0][0], bboxs[0][1], bboxs[0][0]+h+1, bboxs[0][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+            Drawer.text(xy=(bboxs[0][0], bboxs[0][1]), text=text, font=font, fill=None)
+
+            return img
+
+        human_num = len(np.where(labels == 1)[0])
+        node_num = len(labels)
+
+        Drawer = ImageDraw.Draw(img)
+
+        # count = 0
+        for h_idx in range(human_num):
+            for i_idx in range(node_num):
+                if h_idx == i_idx:
+                    continue
+                if h_idx == 0:
+                    edge_idx = i_idx - 1
+                elif h_idx > i_idx:
+                    edge_idx = h_idx * (node_num-1) + i_idx
+                else:
+                    edge_idx = h_idx * (node_num-1) + i_idx -1
+
+                action_idx = np.where(raw_action[edge_idx] > score_thresh)[0]
+                action_idx = [id for id in action_idx if id != 0]
+
+                text = str()
+                det_label, det_score = str(), str()
+                if len(action_idx) > 0:
+                    
+                    r_color = random.choice(np.arange(256))
+                    g_color = random.choice(np.arange(256))
+                    b_color = random.choice(np.arange(256))
+
+                    text1 = vcoco_metadata.coco_classes[labels[i_idx]]
+                    # if text1=='cake': continue
+                    Drawer.rectangle(list(bboxs[h_idx]), outline='#FF0000', width=line_width)
+                    Drawer.rectangle(list(bboxs[i_idx]), outline='#FF0000', width=line_width)
+
+                    h, w = font.getsize(text1)
+                    # Drawer.rectangle(xy=(bboxs[i_idx][0], bboxs[i_idx][1], bboxs[i_idx][0]+h+1, bboxs[i_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[i_idx][0], bboxs[i_idx][1]), text=text1, font=font, fill=None)
+                    Drawer.rectangle(xy=(bboxs[i_idx][0], bboxs[i_idx][1]-w-1, bboxs[i_idx][0]+h+1, bboxs[i_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    Drawer.text(xy=(bboxs[i_idx][0], bboxs[i_idx][1]-w-1), text=text1, font=font, fill=None)
+                    im_w,im_h = img.size
+                    x1,y1,x2,y2 = bboxs[h_idx]
+                    x1_,y1_,x2_,y2_ = bboxs[i_idx]
+
+                    c0 = int(0.5*x1)+int(0.5*x2)
+                    r0 = int(0.5*y1)+int(0.5*y2)
+                    c1 = int(0.5*x1_)+int(0.5*x2_)
+                    r1 = int(0.5*y1_)+int(0.5*y2_)
+                    c0 = max(0,min(c0,im_w-1))
+                    c1 = max(0,min(c1,im_w-1))
+                    r0 = max(0,min(r0,im_h-1))
+                    r1 = max(0,min(r1,im_h-1))
+                    # import ipdb; ipdb.set_trace()
+                    Drawer.line(((c0,r0),(c1,r1)), fill=(r_color,g_color,b_color), width=3)
+                    
+                    shift = 0
+                    for i in range(len(action_idx)):
+                    #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                    #     h, w = font.getsize(text)
+                    #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                        det_label = det_label + "  " + vcoco_metadata.action_class_with_object[action_idx[i]]
+                        det_score = det_score + "  " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                        h1, w1 = font.getsize(det_label)
+                        h2, w2 = font.getsize(det_score)
+                        Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1], bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                        # Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h2+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]), text=det_label, font=font, fill=None)
+                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]+w1+1), text=det_score, font=font, fill=None)
+                    
+        return img
+
+    except Exception as e:
+        print("Error:", e)
+        print("bboxs: {}, labels: {}" .format(bboxs, labels))
+    finally:
+        pass
+
 
 def vis_img_frcnn(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8):
     try:

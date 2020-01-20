@@ -16,8 +16,9 @@ import torch
 
 if __name__ == "__main__":
     # set up model
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, rpn_post_nms_top_n_test=200, box_batch_size_per_image=128, box_score_thresh=0.1, box_nms_thresh=0.3)
-    devise = torch.device('cuda:0')
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, rpn_post_nms_top_n_test=200, \
+                                                                 box_batch_size_per_image=128, box_score_thresh=0.1, box_nms_thresh=0.3)
+    device = torch.device('cuda:0')
     model.cuda()
     model.eval()
 
@@ -39,7 +40,7 @@ if __name__ == "__main__":
         root = 'datasets/hico/images/'
         image = Image.open(os.path.join(root, anno_list[ind]['image_path_postfix'])).convert('RGB')
         input = torchvision.transforms.functional.to_tensor(image)
-        input = input.to(devise)
+        input = input.to(device)
         outputs = model([input], save_feat=True)
 
         # save object detection result data
