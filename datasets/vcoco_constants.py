@@ -17,7 +17,7 @@ class VcocoConstants(io.JsonSerializableClass):
         # select proper boxes from rpn
         self.background_score_thresh = 0.4
         self.human_score_thresh = 0.8
-        self.object_score_thresh = 0.3
+        self.object_score_thresh = 0.4
         self.max_num_background = 10
         self.max_num_human = 10
         self.max_num_objects_per_class = 10
@@ -33,6 +33,12 @@ class VcocoConstants(io.JsonSerializableClass):
         
         # word2vec
         self.word2vec = os.path.join(self.proc_dir, 'vcoco_word2vec.hdf5')
+
+        # visual && spatial data
+        self.train_visual_data = os.path.join(self.proc_dir, 'vcoco_train', 'vcoco_data.hdf5')
+        self.train_spatial_data = os.path.join(self.proc_dir, 'vcoco_train', 'spatial_feat.hdf5')
+        self.val_visual_data = os.path.join(self.proc_dir, 'vcoco_val', 'vcoco_data.hdf5')
+        self.val_spatial_data = os.path.join(self.proc_dir, 'vcoco_val', 'spatial_feat.hdf5')
 
         # inference directory
         self.infer_dir = './inference_imgs'

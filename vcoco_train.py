@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 import random
 
 import utils.io as io
-from model.vcoco_model import AGRNN
+from model.vcoco_model import AGRNN, Predictor
 from datasets import vcoco_metadata
 from utils.vis_tool import vis_img_vcoco
 from datasets.vcoco_constants import VcocoConstants
@@ -33,7 +33,7 @@ from datasets.vcoco_dataset import VcocoDataset, collate_fn
 
 def run_model(args, data_const):
     # set up dataset variable
-    train_dataset = VcocoDataset(data_const=data_const, subset='vcoco_train', data_aug=args.data_aug, sampler=args.sampler)
+    train_dataset = VcocoDataset(data_const=data_const, subset='vcoco_trainval', data_aug=args.data_aug, sampler=args.sampler)
     val_dataset = VcocoDataset(data_const=data_const, subset='vcoco_val', data_aug=False, sampler=args.sampler)
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
@@ -46,8 +46,17 @@ def run_model(args, data_const):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print('training on {}...'.format(device))
 
-    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge)
+    model = AGRNN(feat_type=args.feat_type, bias=args.bias, bn=args.bn, dropout=args.drop_prob, multi_attn=args.multi_attn, layer=args.layers, diff_edge=args.diff_edge, HICO=args.hico)
 
+    # load pretrained model of HICO_DET dataset
+    if args.hico:
+        print(f"loading pretrained model of HICO_DET dataset {args.hico}")
+        checkpoints = torch.load(args.hico, map_location=device)
+        # import ipdb; ipdb.set_trace()
+        model.load_state_dict(checkpoints['state_dict'])
+        # change the last layer 117->24
+        model.edge_readout.classifier.layers[1] = Predictor(model.CONFIG1).classifier.layers[1]
+     
     # calculate the amount of all the learned parameters
     parameter_num = 0
     for param in model.parameters():
@@ -68,7 +77,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.5) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=600, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -110,7 +119,8 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
         epoch_loss = 0
         for phase in ['train', 'val']:
             start_time = time.time()
-            running_loss = 0.0
+            running_loss = 0
+            # all_edge = 0
             idx = 0
             
             VcocoDataset.data_sample_count=0
@@ -152,7 +162,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         raw_outputs = raw_outputs.cpu().detach().numpy()
                         # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
                         class_img = vis_img_vcoco(image, det_boxes[0], roi_labels[0], roi_scores[0], edge_labels[0:int(edge_num[0])].cpu().numpy(), score_thresh=0.7)
-                        action_img = vis_img_vcoco(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.7)
+                        action_img = vis_img_vcoco(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.5)
                         writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
                         writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
                         writer.add_text('img_name', img_name[0][:].astype(np.uint8).tostring().decode('ascii'), epoch)
@@ -160,8 +170,10 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 idx+=1
                 # accumulate loss of each batch
                 running_loss += loss.item() * edge_labels.shape[0]
+                # all_edge += edge_labels.shape[0]
             # calculate the loss and accuracy of each epoch
             epoch_loss = running_loss / len(dataset[phase])
+            # epoch_loss = running_loss / all_edge
             # import ipdb; ipdb.set_trace()
             # log trainval datas, and visualize them in the same graph
             if phase == 'train':
@@ -177,7 +189,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
+        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 200:
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,
@@ -272,6 +284,9 @@ parser.add_argument('--diff_edge',  type=str2bool, default='true', required=True
 
 parser.add_argument('--sampler',  type=float, default=0, 
                     help='h_h edge, h_o edge, o_o edge are different with each other')
+
+parser.add_argument('--hico',  type=str, default=None,
+                    help='location of the pretrained model of HICO_DET dataset: None')
 
 args = parser.parse_args() 
 

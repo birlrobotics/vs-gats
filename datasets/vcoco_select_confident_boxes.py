@@ -143,7 +143,7 @@ def select(data_const):
         subset_dir = os.path.join(data_const.proc_dir, subset)
         io.mkdir_if_not_exists(subset_dir, recursive=True)
 
-        print('Creating selected_coco_cls_dets.hdf5 file ...')
+        print(f'Creating selected_coco_cls_dets.hdf5 file for {subset}...')
         hdf5_file = os.path.join(subset_dir,'selected_coco_cls_dets.hdf5')
         f = h5py.File(hdf5_file,'w')
 

@@ -18,7 +18,10 @@ coco_classes = ['__background__',  # always index 0
 # action_classes = ['none', 'hold', 'stand', 'sit', 'ride', 'walk', 'look', 'hit', 'eat', 'jump', 'lay', 'talk_on_phone', 'carry',
 #                   'throw', 'catch', 'cut', 'run', 'work_on_computer', 'ski', 'surf', 'skateboard', 'smile', 'drink',
 #                   'kick', 'point', 'read', 'snowboard']
-action_classes = ['none', 'hold', 'stand', 'sit', 'ride', 'walk', 'look', 'hit', 'hit_with', 'eat', 'eat_with', 'jump', 'lay', 'talk_on_phone', 'carry',
+# action_classes = ['none', 'hold', 'stand', 'sit', 'ride', 'walk', 'look', 'hit', 'hit_with', 'eat', 'eat_with', 'jump', 'lay', 'talk_on_phone', 'carry',
+#                   'throw', 'catch', 'cut', 'cut_with', 'run', 'work_on_computer', 'ski', 'surf', 'skateboard', 'smile', 'drink',
+#                   'kick', 'point', 'read', 'snowboard']
+action_classes = ['hold', 'stand', 'sit', 'ride', 'walk', 'look', 'hit', 'hit_with', 'eat', 'eat_with', 'jump', 'lay', 'talk_on_phone', 'carry',
                   'throw', 'catch', 'cut', 'cut_with', 'run', 'work_on_computer', 'ski', 'surf', 'skateboard', 'smile', 'drink',
                   'kick', 'point', 'read', 'snowboard']
 action_class_ins = [500, 2163, 2448, 1054, 236, 356, 2055, 203, 376, 381, 228, 187,  262,  141,  161, 173, 317, 248, 310, 259, 269, 867, 70, 77, 23, 65, 212]

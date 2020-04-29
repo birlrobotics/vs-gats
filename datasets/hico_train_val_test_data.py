@@ -33,7 +33,7 @@ matplotlib.use('TKAgg')
 def get_node_index(classname, bbox, det_classes, det_boxes, node_num, labeled=True):
     bbox = np.array(bbox, dtype=np.float32)
  
-    max_iou = 0.3  # Use 0.5 as a threshold for evaluation
+    max_iou = 0.5  # Use 0.5 as a threshold for evaluation
     max_iou_index = -1
 
     for i_node in range(node_num):

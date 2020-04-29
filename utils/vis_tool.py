@@ -199,19 +199,23 @@ def vis_img_vcoco(img, bboxs, labels, scores=None, raw_action=None, score_thresh
             
             text =  vcoco_metadata.action_class_with_object[raw_action]
             h, w = font.getsize(text)
-            Drawer.rectangle(xy=(bboxs[0][0], bboxs[0][1], bboxs[0][0]+h+1, bboxs[0][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
-            Drawer.text(xy=(bboxs[0][0], bboxs[0][1]), text=text, font=font, fill=None)
+            # Drawer.rectangle(xy=(bboxs[0][0], bboxs[0][1], bboxs[0][0]+h+1, bboxs[0][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+            # Drawer.text(xy=(bboxs[0][0], bboxs[0][1]), text=text, font=font, fill=None)
+            Drawer.rectangle(xy=(bboxs[1][0], bboxs[1][1], bboxs[1][0]+h+1, bboxs[1][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+            Drawer.text(xy=(bboxs[1][0], bboxs[1][1]), text=text, font=font, fill=None)
 
             return img
 
         human_num = len(np.where(labels == 1)[0])
         node_num = len(labels)
+        obj_num = node_num - human_num
 
         Drawer = ImageDraw.Draw(img)
 
         # count = 0
         for h_idx in range(human_num):
             for i_idx in range(node_num):
+            # for i_idx in range(human_num, node_num):
                 if h_idx == i_idx:
                     continue
                 if h_idx == 0:
@@ -220,6 +224,7 @@ def vis_img_vcoco(img, bboxs, labels, scores=None, raw_action=None, score_thresh
                     edge_idx = h_idx * (node_num-1) + i_idx
                 else:
                     edge_idx = h_idx * (node_num-1) + i_idx -1
+                # edge_idx = h_idx * obj_num + i_idx - human_num
 
                 action_idx = np.where(raw_action[edge_idx] > score_thresh)[0]
                 action_idx = [id for id in action_idx if id != 0]
@@ -265,6 +270,7 @@ def vis_img_vcoco(img, bboxs, labels, scores=None, raw_action=None, score_thresh
                     # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
                         det_label = det_label + "  " + vcoco_metadata.action_class_with_object[action_idx[i]]
                         det_score = det_score + "  " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                        # import ipdb; ipdb.set_trace()
                         h1, w1 = font.getsize(det_label)
                         h2, w2 = font.getsize(det_score)
                         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1], bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)

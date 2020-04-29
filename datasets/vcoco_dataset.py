@@ -16,7 +16,7 @@ import random
 class VcocoDataset(Dataset):
     '''
     Args:
-        subset: ['vcoco_train', 'vcoco_val', 'vcoco_test']
+        subset: ['vcoco_train', 'vcoco_val', 'vcoco_test', 'vcoco_trainval']
     '''
     data_sample_count = 0   # record how many times to process data sampling 
 

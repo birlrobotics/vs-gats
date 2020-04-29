@@ -26,9 +26,12 @@ class NodeUpdate(nn.Module):
         return {'new_n_f': n_feat, 'new_n_f_lang': n_feat_lang}
 
 class Predictor(nn.Module):
-    def __init__(self, CONFIG):
+    def __init__(self, CONFIG, HICO=None):
         super(Predictor, self).__init__()
-        self.classifier = MLP(CONFIG.G_ER_L_S, CONFIG.G_ER_A, CONFIG.G_ER_B, CONFIG.G_ER_BN, CONFIG.G_ER_D)
+        if not HICO:
+            self.classifier = MLP(CONFIG.G_ER_L_S, CONFIG.G_ER_A, CONFIG.G_ER_B, CONFIG.G_ER_BN, CONFIG.G_ER_D)
+        else:
+            self.classifier = MLP(CONFIG.G_ER_L_S_HICO, CONFIG.G_ER_A_HICO, CONFIG.G_ER_B_HICO, CONFIG.G_ER_BN_HICO, CONFIG.G_ER_D_HICO)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, edge):
@@ -40,7 +43,7 @@ class Predictor(nn.Module):
         return {'pred': pred}
 
 class AGRNN(nn.Module):
-    def __init__(self, feat_type='fc7', bias=True, bn=True, dropout=None, multi_attn=False, layer=1, diff_edge=False):
+    def __init__(self, feat_type='fc7', bias=True, bn=True, dropout=None, multi_attn=False, layer=1, diff_edge=False, HICO=None):
         super(AGRNN, self).__init__()
  
         self.multi_attn = multi_attn
@@ -64,7 +67,11 @@ class AGRNN(nn.Module):
             self.h_node_update = NodeUpdate(self.CONFIG1)
             if diff_edge:
                 self.o_node_update = NodeUpdate(self.CONFIG1)
-        self.edge_readout = Predictor(self.CONFIG1)
+
+        if HICO:
+            self.edge_readout = Predictor(self.CONFIG1, HICO)
+        else:
+            self.edge_readout = Predictor(self.CONFIG1)
 
     def _build_graph(self, node_num, roi_label, node_space, diff_edge):
 
@@ -115,6 +122,7 @@ class AGRNN(nn.Module):
         # get corresponding readout edge in the graph
         for dst in h_node_list:
             for src in range(node_num):
+            # for src in range(len(h_node_list), node_num):
                 if dst == src:
                     continue
                 readout_edge_list.append((src, dst))

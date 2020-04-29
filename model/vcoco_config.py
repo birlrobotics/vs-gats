@@ -6,7 +6,8 @@ class CONFIGURATION(object):
     def __init__(self, feat_type='fc7', layer=1, bias=True, bn=False, dropout=0.2, multi_attn=False):
         
         self.feat_type = feat_type
-        self.ACTION_NUM = 25
+        # self.ACTION_NUM = 25
+        self.ACTION_NUM = 24
         # graph head model
         self.G_H_L_S = [12544, 2048, 1024]   # 
         self.G_H_A   = ['ReLU', 'ReLU']
@@ -24,6 +25,12 @@ class CONFIGURATION(object):
                     self.G_ER_B   = bias
                     self.G_ER_BN  = bn
                     self.G_ER_D   = dropout
+
+                    self.G_ER_L_S_HICO = [1024+300+16+300+1024, 1024, 117]
+                    self.G_ER_A_HICO   = ['ReLU', 'Identity']
+                    self.G_ER_B_HICO   = bias
+                    self.G_ER_BN_HICO  = bn
+                    self.G_ER_D_HICO   = dropout
                     # self.G_ER_GRU = 1024
 
                     # # gnn node function
