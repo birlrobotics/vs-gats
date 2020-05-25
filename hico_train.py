@@ -178,7 +178,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 160:
+        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (200-1):
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,
@@ -241,7 +241,7 @@ parser.add_argument('--pretrained', '-p', type=str, default=None,
                     help='location of the pretrained model file for training: None')
 parser.add_argument('--log_dir', type=str, default='./log',
                     help='path to save the log data like loss\accuracy... : ./log') 
-parser.add_argument('--save_dir', type=str, default='./checkpoints',
+parser.add_argument('--save_dir', type=str, default='./checkpoints/hico',
                     help='path to save the checkpoints: ./checkpoints')
 
 parser.add_argument('--epoch', type=int, default=300,

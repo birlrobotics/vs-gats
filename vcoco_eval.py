@@ -36,6 +36,8 @@ def main(args):
 
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
+        if not args.exp_ver:
+            args.exp_ver = args.pretrained.split("/")[-3]+"_"+args.pretrained.split("/")[-1].split("_")[-2]
         data_const = VcocoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
         model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers'], diff_edge=checkpoint['diff_edge']) #2 )
         # ipdb.set_trace()
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     # parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
     #                     help='if using graph head, here should be pool: default(fc7) ')
 
-    parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+    parser.add_argument('--exp_ver', '--e_v', type=str, default=None, 
                         help='the version of code, will create subdir in log/ && checkpoints/ ')
 
     parser.add_argument('--rewrite', '-r', action='store_true', default=False,

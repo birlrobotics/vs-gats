@@ -189,7 +189,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch > 200:
+        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (200-1):
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,

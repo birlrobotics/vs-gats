@@ -41,10 +41,10 @@ class VcocoDataset(Dataset):
         return subset_ids
 
     def _load_subset_app_data(self, subset):
-        return h5py.File(os.path.join(self.data_const.proc_dir, subset, 'vcoco_data.hdf5'))
+        return h5py.File(os.path.join(self.data_const.proc_dir, subset, 'vcoco_data.hdf5'), 'r')
 
     def _load_subset_spatial_data(self, subset):
-        return h5py.File(os.path.join(self.data_const.proc_dir, subset, 'spatial_feat.hdf5'))
+        return h5py.File(os.path.join(self.data_const.proc_dir, subset, 'spatial_feat.hdf5'), 'r')
 
     def _get_obj_one_hot(self,node_ids):
         num_cand = len(node_ids)
@@ -144,12 +144,12 @@ class VcocoDataset(Dataset):
         data['node_num'] = single_app_data['node_num'].value
         # data['node_labels'] = single_app_data['node_labels'][:]
         data['edge_labels'] = single_app_data['edge_labels'][:]
-        data['edge_num'] = data['edge_labels'].shape[0]
+        # data['edge_num'] = data['edge_labels'].shape[0]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
-        data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
+        # data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
         data['word2vec'] = self._get_word2vec(data['roi_labels'])
-        data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
+        # data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
         # import ipdb; ipdb.set_trace()
         if self.data_aug:
             thresh = random.random()
@@ -191,13 +191,13 @@ def collate_fn(batch):
     batch_data['roi_scores'] = []
     batch_data['node_num'] = []
     batch_data['edge_labels'] = []
-    batch_data['edge_num'] = []
+    # batch_data['edge_num'] = []
     # batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
-    batch_data['node_one_hot'] = []
+    # batch_data['node_one_hot'] = []
     batch_data['word2vec'] = []
-    batch_data['interactive_label'] = []
+    # batch_data['interactive_label'] = []
     for data in batch:
         batch_data['global_id'].append(data['global_id'])
         batch_data['img_name'].append(data['img_name'])
@@ -207,20 +207,20 @@ def collate_fn(batch):
         batch_data['node_num'].append(data['node_num'])
         # batch_data['node_labels'].append(data['node_labels'])
         batch_data['edge_labels'].append(data['edge_labels'])
-        batch_data['edge_num'].append(data['edge_num'])
+        # batch_data['edge_num'].append(data['edge_num'])
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
-        batch_data['node_one_hot'].append(data['node_one_hot'])
+        # batch_data['node_one_hot'].append(data['node_one_hot'])
         batch_data['word2vec'].append(data['word2vec'])
-        batch_data['interactive_label'].append(data['interactive_label'])
+        # batch_data['interactive_label'].append(data['interactive_label'])
 
     # import ipdb; ipdb.set_trace()
     # batch_data['node_labels'] = torch.FloatTensor(np.concatenate(batch_data['node_labels'], axis=0))
     batch_data['edge_labels'] = torch.FloatTensor(np.concatenate(batch_data['edge_labels'], axis=0))
     batch_data['features'] = torch.FloatTensor(np.concatenate(batch_data['features'], axis=0))
     batch_data['spatial_feat'] = torch.FloatTensor(np.concatenate(batch_data['spatial_feat'], axis=0))
-    batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
+    # batch_data['node_one_hot'] = torch.FloatTensor(np.concatenate(batch_data['node_one_hot'], axis=0))
     batch_data['word2vec'] = torch.FloatTensor(np.concatenate(batch_data['word2vec'], axis=0))
-    batch_data['interactive_label'] = torch.FloatTensor(np.concatenate(batch_data['interactive_label'], axis=0))
+    # batch_data['interactive_label'] = torch.FloatTensor(np.concatenate(batch_data['interactive_label'], axis=0))
 
     return batch_data

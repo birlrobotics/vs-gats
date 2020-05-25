@@ -34,6 +34,8 @@ def main(args):
 
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
+        if not args.exp_ver:
+            args.exp_ver = args.pretrained.split("/")[-3]+"_"+args.pretrained.split("/")[-1].split("_")[-2]
         data_const = HicoConstants(feat_type=checkpoint['feat_type'], exp_ver=args.exp_ver)
         model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers'], diff_edge=checkpoint['diff_edge']) #2 )
         # ipdb.set_trace()
@@ -51,13 +53,13 @@ def main(args):
     pred_hoi_dets_hdf5 = os.path.join(data_const.result_dir, 'pred_hoi_dets.hdf5')
     pred_hois = h5py.File(pred_hoi_dets_hdf5,'w')
 
-    test_dataset = HicoDataset(data_const=data_const, subset='test')
+    test_dataset = HicoDataset(data_const=data_const, subset='test', test=True)
     test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
     # for global_id in tqdm(test_list): 
     for data in tqdm(test_dataloader):
         train_data = data
         global_id = train_data['global_id'][0]
-        img_name = train_data['img_name'][0]
+        # img_name = train_data['img_name'][0]
         det_boxes = train_data['det_boxes'][0]
         roi_scores = train_data['roi_scores'][0]
         roi_labels = train_data['roi_labels'][0]
@@ -126,7 +128,7 @@ if __name__ == "__main__":
     # parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
     #                     help='if using graph head, here should be pool: default(fc7) ')
 
-    parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
+    parser.add_argument('--exp_ver', '--e_v', type=str, default=None,
                         help='the version of code, will create subdir in log/ && checkpoints/ ')
 
     args = parser.parse_args()
