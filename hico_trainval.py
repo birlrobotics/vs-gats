@@ -177,7 +177,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
                         
-        scheduler.step()
+        # scheduler.step()
         # save model
         if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (200-1):
             checkpoint = { 

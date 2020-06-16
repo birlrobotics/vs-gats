@@ -134,7 +134,7 @@ Run the following script: option 'final_ver' means the name of which experiment 
 bash hico_eval.sh 'final_ver' 'path_to_the_checkpoint_file'
 ```
 
-For V-COCO dataset:
+For V-COCO dataset, you first need to cover the original `./datasets/vcoco/vsrl_eval.py` with the new one in `./result/vsrl_eval.py` because we add some codes to save the detection results. Then run:
 
 ```
 python vcoco_eval.py -p='path_to_the_checkpoint_file'
