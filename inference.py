@@ -36,7 +36,7 @@ def main(args):
         # set up model and initialize it with uploaded checkpoint
         # ipdb.set_trace()
         data_const = HicoConstants(feat_type=checkpoint['feat_type'])
-        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers'], diff_edge=checkpoint['diff_edge']) #2 )
+        model = AGRNN(feat_type=checkpoint['feat_type'], bias=checkpoint['bias'], bn=checkpoint['bn'], dropout=checkpoint['dropout'], multi_attn=checkpoint['multi_head'], layer=checkpoint['layers'], diff_edge=checkpoint['diff_edge']) 
         # ipdb.set_trace()
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device)
@@ -50,7 +50,7 @@ def main(args):
     original_imgs_dir = os.path.join(data_const.infer_dir, 'original_imgs')
     if not os.path.exists(original_imgs_dir):
         os.makedirs(original_imgs_dir)
-    original_imgs_dir = './datasets/hico/images/test2015'
+    # original_imgs_dir = './datasets/hico/images/test2015'
     data_list = sorted(os.listdir(original_imgs_dir))
     test_dataset = HicoDataset(data_const=data_const, subset='test')
 
@@ -93,7 +93,7 @@ def main(args):
         det_outputs = det_outputs.cpu().detach().numpy()
         # import ipdb; ipdb.set_trace()
         gt_img = vis_img(image, det_boxes, roi_labels, roi_scores, edge_labels.cpu().numpy(), score_thresh=0.5)
-        det_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, det_outputs, score_thresh=0.3)
+        det_img = vis_img(image_temp, det_boxes, roi_labels, roi_scores, det_outputs, score_thresh=0.2)
     
         # det_img.save('/home/birl/ml_dl_projects/bigjun/hoi/VS_GATs/inference_imgs/original_imgs'+'/'+img)
         det_img.save(save_path+'/'+img)
@@ -130,8 +130,8 @@ if __name__ == "__main__":
                         help='A path to the test data is necessary.')
     # parser.add_argument('--dataset', '-d', type=str, default='ucf101', choices=['ucf101','hmdb51'],
     #                     help='Location of the dataset: ucf101')
-    parser.add_argument('--pretrained', '-p', type=str, default='./result/checkpoint_248_epoch.pth',
-                        help='Location of the checkpoint file: ./checkpoints/gcn1_double_grpah/checkpoint_240_epoch.pth')
+    parser.add_argument('--pretrained', '-p', type=str, default='./result/checkpoint_trainval.pth',
+                        help='Location of the checkpoint file: ./result/checkpoint_trainval.pth')
     parser.add_argument('--gpu', type=str2bool, default='true',
                         help='use GPU or not: true')
     parser.add_argument('--random_data', type=str2bool, default='false',

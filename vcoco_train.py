@@ -33,7 +33,7 @@ from datasets.vcoco_dataset import VcocoDataset, collate_fn
 
 def run_model(args, data_const):
     # set up dataset variable
-    train_dataset = VcocoDataset(data_const=data_const, subset='vcoco_trainval', data_aug=args.data_aug, sampler=args.sampler)
+    train_dataset = VcocoDataset(data_const=data_const, subset='vcoco_train', data_aug=args.data_aug, sampler=args.sampler)
     val_dataset = VcocoDataset(data_const=data_const, subset='vcoco_val', data_aug=False, sampler=args.sampler)
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
@@ -77,7 +77,7 @@ def run_model(args, data_const):
     # ipdb.set_trace()
     # criterion = nn.MultiLabelSoftMarginLoss()
     criterion = nn.BCEWithLogitsLoss()
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=600, gamma=0.1) #the scheduler divides the lr by 10 every 150 epochs
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.3) #the scheduler divides the lr by 10 every 150 epochs
 
     # get the configuration of the model and save some key configurations
     io.mkdir_if_not_exists(os.path.join(args.save_dir, args.exp_ver), recursive=True)
@@ -137,7 +137,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                 spatial_feat = train_data['spatial_feat']
                 word2vec = train_data['word2vec']
                 features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
-                # if idx == 10: break    
+                if idx == 10: break    
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
@@ -189,7 +189,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                         
         # scheduler.step()
         # save model
-        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (200-1):
+        if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (500-1):
             checkpoint = { 
                             'lr': args.lr,
                            'b_s': args.batch_size,
@@ -225,13 +225,13 @@ def str2bool(arg):
 
 parser = argparse.ArgumentParser(description="HOI DETECTION!")
 
-parser.add_argument('--batch_size', '--b_s', type=int, default=1,required=True,
-                    help='batch size: 1')
+parser.add_argument('--batch_size', '--b_s', type=int, default=32,required=True,
+                    help='batch size: 32')
 parser.add_argument('--layers', type=int, default=1, required=True,
                     help='the num of gcn layers: 1') 
-parser.add_argument('--drop_prob', type=float, default=0, required=True,
-                    help='dropout parameter: 0')
-parser.add_argument('--lr', type=float, default=0.001, required=True,
+parser.add_argument('--drop_prob', type=float, default=0.5, required=True,
+                    help='dropout parameter: 0.5')
+parser.add_argument('--lr', type=float, default=0.00001, required=True,
                     help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
@@ -241,10 +241,10 @@ parser.add_argument('--bn', type=str2bool, default='false',
                     help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')
-parser.add_argument('--multi_attn', '--m_a', type=str2bool, default='true', required=True,
+parser.add_argument('--multi_attn', '--m_a', type=str2bool, default='false', required=True,
                      help='use multi attention or not: False')
-parser.add_argument('--data_aug', '--d_a', type=str2bool, default='true', required=True,
-                    help='data argument: 2')
+parser.add_argument('--data_aug', '--d_a', type=str2bool, default='false', required=True,
+                    help='data argument: false')
 
 parser.add_argument('--img_data', type=str, default='datasets/hico/images/train2015',
                     help='location of the original dataset')
@@ -255,16 +255,14 @@ parser.add_argument('--log_dir', type=str, default='./log/vcoco',
 parser.add_argument('--save_dir', type=str, default='./checkpoints/vcoco',
                     help='path to save the checkpoints: ./checkpoints/vcoco')
 
-parser.add_argument('--epoch', type=int, default=300,
-                    help='number of epochs to train: 300') 
+parser.add_argument('--epoch', type=int, default=600,
+                    help='number of epochs to train: 600') 
 parser.add_argument('--start_epoch', type=int, default=0,
                     help='number of beginning epochs : 0') 
 parser.add_argument('--print_every', type=int, default=10,
                     help='number of steps for printing training and validation loss: 10') 
-parser.add_argument('--save_every', type=int, default=20,
+parser.add_argument('--save_every', type=int, default=10,
                     help='number of steps for saving the model parameters: 50')                      
-parser.add_argument('--test_every', type=int, default=50,
-                    help='number of steps for testing the model: 50')  
 
 parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
                     help='the version of code, will create subdir in log/ && checkpoints/ ')
@@ -276,10 +274,10 @@ parser.add_argument('--train_model', '--t_m', type=str, default='epoch', require
 parser.add_argument('--feat_type', '--f_t', type=str, default='fc7', required=True, choices=['fc7', 'pool'],
                     help='if using graph head, here should be \'pool\': default(fc7) ')
 
-parser.add_argument('--optim',  type=str, default='sgd', choices=['sgd', 'adam'], required=True,
-                    help='which optimizer to be use: sgd ')
+parser.add_argument('--optim',  type=str, default='adam', choices=['sgd', 'adam'], required=True,
+                    help='which optimizer to be use: adam ')
 
-parser.add_argument('--diff_edge',  type=str2bool, default='true', required=True,
+parser.add_argument('--diff_edge',  type=str2bool, default='false', required=True,
                     help='h_h edge, h_o edge, o_o edge are different with each other')
 
 parser.add_argument('--sampler',  type=float, default=0, 

@@ -16,7 +16,8 @@ def main():
     #     exp_dir,
     #     'mAP_eval/test_30000/mAP.json')
     
-    map_json = '/home/birl/ml_dl_projects/bigjun/hoi/agrnn/result/hico/final_ver/map/mAP.json'
+    # map_json = '/home/birl/ml_dl_projects/bigjun/hoi/agrnn/result/hico/final_ver/map/mAP.json'
+    map_json = '/home/birl/ml_dl_projects/bigjun/hoi/VS_GATs/result/hico/vsgat_trainval2_260/map/mAP.json'
     hoi_aps = io.load_json_object(map_json)['AP']
     
     data_const = HicoConstants()

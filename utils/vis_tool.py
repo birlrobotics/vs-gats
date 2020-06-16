@@ -59,7 +59,7 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
 
         Drawer = ImageDraw.Draw(img)
 
-        # count = 0
+        count = 0
         for h_idx in range(human_num):
             for i_idx in range(node_num):
                 if i_idx <= h_idx:
@@ -76,6 +76,8 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
                     b_color = random.choice(np.arange(256))
 
                     text1 = metadata.coco_classes[labels[i_idx]]
+                    if text1 == 'pizza':
+                        continue
                     # if text1=='cake': continue
                     Drawer.rectangle(list(bboxs[h_idx]), outline='#FF0000', width=line_width)
                     Drawer.rectangle(list(bboxs[i_idx]), outline='#FF0000', width=line_width)
@@ -102,18 +104,20 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
                     
                     shift = 0
                     for i in range(len(action_idx)):
-                    #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
-                    #     h, w = font.getsize(text)
-                    #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                        if metadata.action_classes[action_idx[i]] == 'no_interaction':
+                            continue
+                        # text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                        # h, w = font.getsize(text)
+                        # Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
                     # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
-                        det_label = det_label + "  " + metadata.action_classes[action_idx[i]]
+                        det_label = det_label + " " + metadata.action_classes[action_idx[i]]
                         det_score = det_score + "  " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
                         h1, w1 = font.getsize(det_label)
                         h2, w2 = font.getsize(det_score)
-                        Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1], bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                        Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]+w1), fill=(r_color,g_color,b_color), outline=None, width=0)
                         # Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h2+1, bboxs[h_idx][1]+w1+w2+1), fill=(r_color,g_color,b_color), outline=None, width=0)
-                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]), text=det_label, font=font, fill=None)
-                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]+w1+1), text=det_score, font=font, fill=None)
+                    Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-1), text=det_label, font=font, fill=None)
+                    # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]+w1+1), text=det_score, font=font, fill=None)
 
                     # # up the bbox
                     #     Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
@@ -137,9 +141,29 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
                     #         det_score = det_score + " " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
                     #         h1, w1 = font.getsize(det_label)
                     #         h2, w2 = font.getsize(det_score)
-                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
-                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1), text=det_label, font=font, fill=None)
-                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-1), text=det_score, font=font, fill=None)
+                    #         # Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-100, bboxs[h_idx][1]-w1-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][1]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-w2-1), text=det_label, font=font, fill=None)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-100, bboxs[h_idx][1]-w1-1), text=det_label, font=font, fill=None)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][1]-w1-1), text=det_score, font=font, fill=None)
+
+                    # elif count == 1:
+                    #     count+=1
+                    #     # down the bbox
+                    #     for i in range(len(action_idx)):
+                    #     #     text = text + " " + metadata.action_classes[action_idx[i]]+str(raw_action[edge_idx][action_idx[i]])
+                    #     #     h, w = font.getsize(text)
+                    #     #     Drawer.rectangle(xy=(bboxs[h_idx][0], bboxs[h_idx][1], bboxs[h_idx][0]+h+1, bboxs[h_idx][1]+w+1), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0], bboxs[h_idx][1]), text=text, font=font, fill=None)
+                    #         det_label = det_label + " " + metadata.action_classes[action_idx[i]]
+                    #         det_score = det_score + " " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
+                    #         h1, w1 = font.getsize(det_label)
+                    #         h2, w2 = font.getsize(det_score)
+                    #         # Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-0, bboxs[h_idx][3]-w1-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1), text=det_label, font=font, fill=None)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-0, bboxs[h_idx][3]-w1-1), text=det_label, font=font, fill=None)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_score, font=font, fill=None)
 
                     # else:
                     #     count+=1
@@ -153,9 +177,11 @@ def vis_img(img, bboxs, labels, scores=None, raw_action=None, score_thresh=0.8, 
                     #         det_score = det_score + " " + str(round(scores[h_idx] * scores[i_idx] * raw_action[edge_idx][action_idx[i]],2))
                     #         h1, w1 = font.getsize(det_label)
                     #         h2, w2 = font.getsize(det_score)
-                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
-                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1), text=det_label, font=font, fill=None)
-                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_score, font=font, fill=None)
+                    #         # Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #         Drawer.rectangle(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1, bboxs[h_idx][0]+h1+1, bboxs[h_idx][3]), fill=(r_color,g_color,b_color), outline=None, width=0)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-w2-1), text=det_label, font=font, fill=None)
+                    #     Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_label, font=font, fill=None)
+                    #     # Drawer.text(xy=(bboxs[h_idx][0]-shift, bboxs[h_idx][3]-w1-1), text=det_score, font=font, fill=None)
                     
         return img
 

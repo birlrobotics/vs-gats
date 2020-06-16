@@ -144,7 +144,7 @@ class VcocoDataset(Dataset):
         data['node_num'] = single_app_data['node_num'].value
         # data['node_labels'] = single_app_data['node_labels'][:]
         data['edge_labels'] = single_app_data['edge_labels'][:]
-        # data['edge_num'] = data['edge_labels'].shape[0]
+        data['edge_num'] = data['edge_labels'].shape[0]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
         # data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
@@ -191,7 +191,7 @@ def collate_fn(batch):
     batch_data['roi_scores'] = []
     batch_data['node_num'] = []
     batch_data['edge_labels'] = []
-    # batch_data['edge_num'] = []
+    batch_data['edge_num'] = []
     # batch_data['node_labels'] = []
     batch_data['features'] = []
     batch_data['spatial_feat'] = []
@@ -207,7 +207,7 @@ def collate_fn(batch):
         batch_data['node_num'].append(data['node_num'])
         # batch_data['node_labels'].append(data['node_labels'])
         batch_data['edge_labels'].append(data['edge_labels'])
-        # batch_data['edge_num'].append(data['edge_num'])
+        batch_data['edge_num'].append(data['edge_num'])
         batch_data['features'].append(data['features'])
         batch_data['spatial_feat'].append(data['spatial_feat'])
         # batch_data['node_one_hot'].append(data['node_one_hot'])

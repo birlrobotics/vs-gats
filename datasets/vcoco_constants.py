@@ -17,7 +17,7 @@ class VcocoConstants(io.JsonSerializableClass):
         # select proper boxes from rpn
         self.background_score_thresh = 0.4
         self.human_score_thresh = 0.8
-        self.object_score_thresh = 0.4
+        self.object_score_thresh = 0.4  # 0.3
         self.max_num_background = 10
         self.max_num_human = 10
         self.max_num_objects_per_class = 10

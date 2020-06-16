@@ -34,8 +34,8 @@ from datasets.hico_dataset import HicoDataset, collate_fn
 
 def run_model(args, data_const):
     # set up dataset variable
-    train_dataset = HicoDataset(data_const=data_const, subset='train', data_aug=args.data_aug, sampler=args.sampler)
-    val_dataset = HicoDataset(data_const=data_const, subset='val', data_aug=False, sampler=args.sampler, test=True)
+    train_dataset = HicoDataset(data_const=data_const, subset='train_val', data_aug=args.data_aug, sampler=args.sampler)
+    val_dataset = HicoDataset(data_const=data_const, subset='val', data_aug=False, sampler=args.sampler)
     dataset = {'train': train_dataset, 'val': val_dataset}
     print('set up dataset variable successfully')
     # use default DataLoader() to load the data. 
@@ -109,7 +109,7 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
     for epoch in range(args.start_epoch, args.epoch):
         # each epoch has a training and validation step
         epoch_loss = 0
-        for phase in ['train', 'val']:
+        for phase in ['train']:
             start_time = time.time()
             running_loss = 0.0
             idx = 0
@@ -117,18 +117,18 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             HicoDataset.data_sample_count=0
             for data in tqdm(dataloader[phase]): 
                 train_data = data
-                img_name = train_data['img_name']
-                det_boxes = train_data['det_boxes']
+                # img_name = train_data['img_name']
+                # det_boxes = train_data['det_boxes']
                 roi_labels = train_data['roi_labels']
-                roi_scores = train_data['roi_scores']
+                # roi_scores = train_data['roi_scores']
                 node_num = train_data['node_num']
                 edge_labels = train_data['edge_labels']
-                edge_num = train_data['edge_num']
+                # edge_num = train_data['edge_num']
                 features = train_data['features']
                 spatial_feat = train_data['spatial_feat']
                 word2vec = train_data['word2vec']
                 features, spatial_feat, word2vec, edge_labels = features.to(device), spatial_feat.to(device), word2vec.to(device), edge_labels.to(device)
-                if idx == 10: break    
+                # if idx == 10: break    
                 if phase == 'train':
                     model.train()
                     model.zero_grad()
@@ -144,19 +144,19 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
                     with torch.no_grad():
                         outputs = model(node_num, features, spatial_feat, word2vec, roi_labels, validation=True)
                         loss = criterion(outputs, edge_labels.float())
-                    # print result every 1000 iteration during validation
-                    if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
-                        # ipdb.set_trace()
-                        image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
-                        image_temp = image.copy()
-                        raw_outputs = nn.Sigmoid()(outputs[0:int(edge_num[0])])
-                        raw_outputs = raw_outputs.cpu().detach().numpy()
-                        # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
-                        class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], edge_labels[0:int(edge_num[0])].cpu().numpy(), score_thresh=0.7)
-                        action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.7)
-                        writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
-                        writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
-                        writer.add_text('img_name', img_name[0], epoch)
+                    # # print result every 1000 iteration during validation
+                    # if idx==0 or idx % round(1000/args.batch_size)==round(1000/args.batch_size)-1:
+                    #     # ipdb.set_trace()
+                    #     image = Image.open(os.path.join(args.img_data, img_name[0])).convert('RGB')
+                    #     image_temp = image.copy()
+                    #     raw_outputs = nn.Sigmoid()(outputs[0:int(edge_num[0])])
+                    #     raw_outputs = raw_outputs.cpu().detach().numpy()
+                    #     # class_img = vis_img(image, det_boxes, roi_labels, roi_scores)
+                    #     class_img = vis_img(image, det_boxes[0], roi_labels[0], roi_scores[0], edge_labels[0:int(edge_num[0])].cpu().numpy(), score_thresh=0.7)
+                    #     action_img = vis_img(image_temp, det_boxes[0], roi_labels[0], roi_scores[0], raw_outputs, score_thresh=0.7)
+                    #     writer.add_image('gt_detection', np.array(class_img).transpose(2,0,1))
+                    #     writer.add_image('action_detection', np.array(action_img).transpose(2,0,1))
+                    #     writer.add_text('img_name', img_name[0], epoch)
 
                 idx+=1
                 # accumulate loss of each batch
@@ -168,15 +168,16 @@ def epoch_train(model, dataloader, dataset, criterion, optimizer, scheduler, dev
             if phase == 'train':
                 train_loss = epoch_loss 
                 HicoDataset.displaycount() 
-            else:
-                writer.add_scalars('trainval_loss_epoch', {'train': train_loss, 'val': epoch_loss}, epoch)
+            # else:
+            #     writer.add_scalars('trainval_loss_epoch', {'train': train_loss, 'val': epoch_loss}, epoch)
+            writer.add_scalars('trainval_loss_epoch', {'train': train_loss}, epoch)
             # print data
             if (epoch % args.print_every) == 0:
                 end_time = time.time()
                 print("[{}] Epoch: {}/{} Loss: {} Execution time: {}".format(\
                         phase, epoch+1, args.epoch, epoch_loss, (end_time-start_time)))
                         
-        # scheduler.step()
+        scheduler.step()
         # save model
         if epoch_loss<0.0405 or epoch % args.save_every == (args.save_every - 1) and epoch >= (200-1):
             checkpoint = { 
@@ -221,13 +222,13 @@ parser.add_argument('--layers', type=int, default=1, required=True,
 parser.add_argument('--drop_prob', type=float, default=0, required=True,
                     help='dropout parameter: 0')
 parser.add_argument('--lr', type=float, default=0.00001, required=True,
-                    help='learning rate: 0.00001')
+                    help='learning rate: 0.001')
 parser.add_argument('--gpu', type=str2bool, default='true', 
                     help='chose to use gpu or not: True') 
 parser.add_argument('--bias', type=str2bool, default='true', required=True,
                     help="add bias to fc layers or not: True")
 parser.add_argument('--bn', type=str2bool, default='false', 
-                    help='use batch normailzation or not: false')
+                    help='use batch normailzation or not: true')
 # parse.add_argument('--bn', action="store_true", default=False,
 #                     help='visualize the result or not')
 parser.add_argument('--multi_attn', '--m_a', type=str2bool, default='false', required=True,
@@ -252,7 +253,6 @@ parser.add_argument('--print_every', type=int, default=10,
                     help='number of steps for printing training and validation loss: 10') 
 parser.add_argument('--save_every', type=int, default=10,
                     help='number of steps for saving the model parameters: 50')                      
- 
 
 parser.add_argument('--exp_ver', '--e_v', type=str, default='v1', required=True,
                     help='the version of code, will create subdir in log/ && checkpoints/ ')
