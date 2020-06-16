@@ -1,6 +1,7 @@
 hico
 map
-v*
+vcoco
+
 __pycache__
 *.hdf5
 *.json
