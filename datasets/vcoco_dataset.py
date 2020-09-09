@@ -173,9 +173,9 @@ class VcocoDataset(Dataset):
         data['edge_num'] = data['edge_labels'].shape[0]
         data['features'] = single_app_data['feature'][:]
         data['spatial_feat'] = single_spatial_data[:]
-        data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
+        # data['node_one_hot'] = self._get_obj_one_hot(data['roi_labels'])
         data['word2vec'] = self._get_word2vec(data['roi_labels'])
-        data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
+        # data['interactive_label'] = self._get_interactive_label(data['edge_labels'])
 
         return data
 # for DatasetLoader
